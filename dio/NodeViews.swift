@@ -1402,7 +1402,7 @@ struct OutputPlaceholderView: View {
 
     private var isVideoOutputNode: Bool {
         switch nodeKind {
-        case .videoGeneration:
+        case .videoGeneration, .seedanceImageToVideo, .wanAnimateMove, .wanAnimateReplace, .imageToVideo:
             return true
         default:
             return false
