@@ -533,6 +533,10 @@ struct ContentView: View {
                                 addNode(of: .imageToVideo, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
+                            menuLeafButton(icon: NodeKind.videoConcat.iconName, title: NodeKind.videoConcat.displayName) {
+                                addNode(of: .videoConcat, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
                             menuLeafButton(icon: NodeKind.wanAnimateReplace.iconName, title: NodeKind.wanAnimateReplace.displayName) {
                                 addNode(of: .wanAnimateReplace, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
@@ -810,6 +814,8 @@ struct ContentView: View {
             node = Node.imageUpload(frame: frame)
         case .videoUpload:
             node = Node.videoUpload(frame: frame)
+        case .videoConcat:
+            node = Node.videoConcat(frame: frame)
         
         default:
             // Fallback for unknown node kinds

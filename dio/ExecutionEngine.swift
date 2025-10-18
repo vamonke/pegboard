@@ -438,6 +438,14 @@ public class ExecutionEngine: ObservableObject {
                 endpoint: "/fal-ai/wan/v2.2-14b/animate/replace",
                 mode: "async"
             )
+        } else if node.kind == .videoConcat {
+            // Local tool node executed via Mock adapter with specific model id
+            modelRef = ModelRef(
+                provider: "Mock",
+                modelID: "video_concat",
+                endpoint: "/execute",
+                mode: "sync"
+            )
         } else {
             modelRef = ModelRef(
                 provider: "Mock",
@@ -596,9 +604,16 @@ public class ExecutionEngine: ObservableObject {
         let adapter = getAdapterForNode(node)
         
         // Create invocation request
+        var params = run.inputParams
+        // Attach resolved inputs under /resolved for adapters that need them
+        let resolved = run.resolvedInputs
+        if case var .object(obj) = params {
+            obj["resolved"] = resolved
+            params = .object(obj)
+        }
         let request = InvocationRequest(
             model: run.model,
-            params: run.inputParams,
+            params: params,
             files: nil,
             runKey: run.runKey,
             credentialID: UUID(), // Mock credential

@@ -86,6 +86,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
     public static let videoUpload = NodeKind(rawValue: "video_upload")
     public static let wanAnimateMove = NodeKind(rawValue: "wan_animate_move")
     public static let wanAnimateReplace = NodeKind(rawValue: "wan_animate_replace")
+    public static let videoConcat = NodeKind(rawValue: "video_concat")
     
     // Node category determines execution behavior
     public var category: NodeCategory {
@@ -134,6 +135,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .videoUpload: return "Video"
         case .wanAnimateMove: return "WAN - Animate Move"
         case .wanAnimateReplace: return "WAN - Animate Replace"
+        case .videoConcat: return "Concat Video"
         default: return rawValue.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
@@ -150,6 +152,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .videoUpload: return "film"
         case .wanAnimateMove: return "film"
         case .wanAnimateReplace: return "film"
+        case .videoConcat: return "film"
         default: return "circle"
         }
     }
@@ -735,6 +738,33 @@ extension Node {
         )
     }
     
+    // Create a Video Concat node (local processing)
+    public static func videoConcat(
+        id: UUID = UUID(),
+        frame: CGRect
+    ) -> Node {
+        let ports = [
+            PortDef(name: "video_url_1", dtype: .video, direction: "in"),
+            PortDef(name: "video_url_2", dtype: .video, direction: "in"),
+            PortDef(name: "video_url_3", dtype: .video, direction: "in"),
+            PortDef(name: "video_url_4", dtype: .video, direction: "in"),
+            PortDef(name: "video_output", dtype: .video, direction: "out", mimeType: "video/mp4")
+        ]
+        let args: JSONValue = .object([
+            "video_url_1": .null,
+            "video_url_2": .null,
+            "video_url_3": .null,
+            "video_url_4": .null
+        ])
+        return Node(
+            id: id,
+            kind: .videoConcat,
+            frame: frame,
+            args: args,
+            ports: ports
+        )
+    }
+
     // Create an ImageGeneration node with default ports and args
     public static func imageGeneration(
         id: UUID = UUID(),
