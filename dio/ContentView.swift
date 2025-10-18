@@ -806,6 +806,8 @@ struct ContentView: View {
             node = Node.videoGeneration(frame: frame)
         case .imageToVideo:
             node = Node.imageToVideo(frame: frame)
+        case .seedanceImageToVideo:
+            node = Node.seedanceImageToVideo(frame: frame)
         case .wanAnimateMove:
             node = Node.wanAnimateMove(frame: frame)
         case .wanAnimateReplace:

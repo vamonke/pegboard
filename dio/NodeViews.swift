@@ -176,6 +176,9 @@ struct NodeCard: View {
             }
             .offset(y: (measuredSize.height / 2) + 28)
         }
+        .onAppear {
+            print("🔍 NodeCard: node=\(node.id) visibleInputPorts=\(visibleInputPorts.count) visibleOutputPorts=\(visibleOutputPorts.count) ports=\(node.ports.count)")
+        }
     }
     
     private var selectionBorderColor: Color {
@@ -1020,16 +1023,6 @@ struct LatestOutputsView: View {
                         .padding(8)
                     )
             } else if status == .running || status == .queued {
-                // VStack(alignment: .leading, spacing: 8) {
-                //     HStack(spacing: 8) {
-                //         ProgressView(value: (progress ?? 0) / 100.0)
-                //             .progressViewStyle(LinearProgressViewStyle())
-                //             .frame(maxWidth: .infinity)
-                //         Text(progressText(progress: progress, status: status))
-                //             .font(.caption)
-                //             .foregroundStyle(.secondary)
-                //     }
-                // }
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(Color(.systemGray5))
                     .frame(height: 100)

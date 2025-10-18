@@ -959,7 +959,7 @@ extension Node {
         imageURL: String? = nil,
         duration: String = "5",
         aspectRatio: String = "auto",
-        resolution: String = "1080p",
+        resolution: String = "720p",
         cameraFixed: Bool = false,
         enableSafetyChecker: Bool = true,
         seed: Int? = nil,
@@ -967,6 +967,7 @@ extension Node {
     ) -> Node {
         let ports = [
             PortDef(name: "image_url", dtype: .image, direction: "in"),
+            PortDef(name: "end_image_url", dtype: .image, direction: "in"),
             PortDef(name: "video_output", dtype: .video, direction: "out", mimeType: "video/mp4")
         ]
         var argsObj: [String: JSONValue] = [
@@ -979,7 +980,7 @@ extension Node {
         ]
         argsObj["image_url"] = imageURL != nil ? .string(imageURL!) : .null
         if let seed = seed { argsObj["seed"] = .number(Double(seed)) }
-        if let end = endImageURL { argsObj["end_image_url"] = .string(end) }
+        if let end = endImageURL { argsObj["end_image_url"] = .string(end) } else { argsObj["end_image_url"] = .null }
         let args: JSONValue = .object(argsObj)
         return Node(
             id: id,

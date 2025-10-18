@@ -726,7 +726,7 @@ struct SeedanceImageToVideoEditView: View {
     @State private var localImageURL: String = ""
     @State private var localDuration: String = "5" // 3..12
     @State private var localAspect: String = "auto"
-    @State private var localResolution: String = "1080p"
+    @State private var localResolution: String = "720p"
     @State private var localCameraFixed: Bool = false
     @State private var localEnableSafety: Bool = true
     @State private var setSeedManually: Bool = false
@@ -754,12 +754,7 @@ struct SeedanceImageToVideoEditView: View {
                 }
             }
 
-            // Image URL
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Image URL").font(.subheadline).fontWeight(.medium)
-                TextField("https://... (jpeg/png/webp)", text: $localImageURL)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-            }
+            // Image URL hidden: now provided via input port
 
             // Duration
             VStack(alignment: .leading, spacing: 8) {
@@ -768,7 +763,7 @@ struct SeedanceImageToVideoEditView: View {
                     ForEach(durationOptions, id: \.self) { opt in
                         Text("\(opt) seconds").tag(opt)
                     }
-                }.pickerStyle(.segmented)
+                }.pickerStyle(.menu)
             }
 
             // Aspect ratio
@@ -791,46 +786,34 @@ struct SeedanceImageToVideoEditView: View {
                 }.pickerStyle(.segmented)
             }
 
-            // Camera fixed & safety
+            // Camera fixed only (safety hidden)
             Toggle("Fix Camera Position", isOn: $localCameraFixed)
-            Toggle("Enable Safety Checker", isOn: $localEnableSafety)
 
-            // Seed
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Set Seed", isOn: $setSeedManually)
-                if setSeedManually {
-                    Stepper(value: $localSeed, in: 0...1_000_000) { Text("Seed: \(localSeed)") }
-                }
-            }
+            // Seed controls hidden
 
-            // End image URL
-            VStack(alignment: .leading, spacing: 8) {
-                Text("End Image URL (optional)").font(.subheadline).fontWeight(.medium)
-                TextField("https://...", text: $localEndImageURL)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-            }
+            // End image URL hidden: now provided via input port
         }
         .onAppear {
             self.localPrompt = node.getArg("/prompt", as: String.self) ?? ""
             self.localImageURL = node.getArg("/image_url", as: String.self) ?? ""
             self.localDuration = node.getArg("/duration", as: String.self) ?? "5"
             self.localAspect = node.getArg("/aspect_ratio", as: String.self) ?? "auto"
-            self.localResolution = node.getArg("/resolution", as: String.self) ?? "1080p"
+            self.localResolution = node.getArg("/resolution", as: String.self) ?? "720p"
             self.localCameraFixed = node.getArg("/camera_fixed", as: Bool.self) ?? false
             self.localEnableSafety = node.getArg("/enable_safety_checker", as: Bool.self) ?? true
+            // Seed UI hidden; still read if present but do not expose controls
             if let seed = node.getArg("/seed", as: Int.self) { self.setSeedManually = true; self.localSeed = seed } else { self.setSeedManually = false }
             self.localEndImageURL = node.getArg("/end_image_url", as: String.self) ?? ""
 
             onRegisterCommit {
                 node.setArg("/prompt", value: self.localPrompt)
-                node.setArg("/image_url", value: self.localImageURL)
+                // image_url provided via input port
                 node.setArg("/duration", value: self.localDuration)
                 node.setArg("/aspect_ratio", value: self.localAspect)
                 node.setArg("/resolution", value: self.localResolution)
                 node.setArg("/camera_fixed", value: self.localCameraFixed)
-                node.setArg("/enable_safety_checker", value: self.localEnableSafety)
-                if self.setSeedManually { node.setArg("/seed", value: self.localSeed) }
-                if !self.localEndImageURL.isEmpty { node.setArg("/end_image_url", value: self.localEndImageURL) }
+                // safety & seed hidden from UI
+                // end_image_url provided via input port
             }
         }
     }

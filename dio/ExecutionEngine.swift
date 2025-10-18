@@ -657,12 +657,14 @@ public class ExecutionEngine: ObservableObject {
     }
     
     private func getAdapterForNode(_ node: Node) -> CloudAdapter {
-        if node.kind == .imageGeneration || node.kind == .imageEdit || node.kind == .seedreamEdit || node.kind == .imageToVideo || node.kind == .wanAnimateMove || node.kind == .wanAnimateReplace {
-            return AdapterRegistry.shared.getAdapter(for: "FAL") ?? FALAdapter()
-        } else if node.kind == .videoGeneration {
+        // if node.kind == .imageGeneration || node.kind == .imageEdit || node.kind == .seedreamEdit || node.kind == .imageToVideo || node.kind == .seedanceImageToVideo || node.kind == .wanAnimateMove || node.kind == .wanAnimateReplace {
+        //     return AdapterRegistry.shared.getAdapter(for: "FAL") ?? FALAdapter()
+        // }
+        if node.kind == .videoGeneration {
             return AdapterRegistry.shared.getAdapter(for: "OpenAI") ?? OpenAIAdapter()
         }
-        return AdapterRegistry.shared.getAdapter(for: "Mock") ?? MockAdapter()
+        return AdapterRegistry.shared.getAdapter(for: "FAL") ?? FALAdapter()
+        // return AdapterRegistry.shared.getAdapter(for: "Mock") ?? MockAdapter()
     }
     
     private func handleSuccessfulResponse(_ response: InvocationResponse, run: Run, node: Node) async throws -> Run {
