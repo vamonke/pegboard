@@ -529,8 +529,8 @@ struct ContentView: View {
                                 addNode(of: .openaiSora, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: NodeKind.imageToVideo.iconName, title: NodeKind.imageToVideo.displayName) {
-                                addNode(of: .imageToVideo, at: canvasCenterPosition())
+                            menuLeafButton(icon: NodeKind.klingVideo25TurboPro.iconName, title: NodeKind.klingVideo25TurboPro.displayName) {
+                                addNode(of: .klingVideo25TurboPro, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
                             menuLeafButton(icon: NodeKind.seedanceImageToVideo.iconName, title: NodeKind.seedanceImageToVideo.displayName) {
@@ -804,8 +804,8 @@ struct ContentView: View {
             node = Node.seedreamEdit(frame: frame)
         case .openaiSora:
             node = Node.openaiSora(frame: frame)
-        case .imageToVideo:
-            node = Node.imageToVideo(frame: frame)
+        case .klingVideo25TurboPro:
+            node = Node.klingVideo25TurboPro(frame: frame)
         case .seedanceImageToVideo:
             node = Node.seedanceImageToVideo(frame: frame)
         case .wanAnimateMove:

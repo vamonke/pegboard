@@ -414,7 +414,7 @@ public class ExecutionEngine: ObservableObject {
                 endpoint: "/videos",
                 mode: "async"
             )
-        } else if node.kind == .imageToVideo {
+        } else if node.kind == .klingVideo25TurboPro {
             // FAL Kling image-to-video
             modelRef = ModelRef(
                 provider: "FAL",
@@ -657,7 +657,7 @@ public class ExecutionEngine: ObservableObject {
     }
     
     private func getAdapterForNode(_ node: Node) -> CloudAdapter {
-        // if node.kind == .imageGeneration || node.kind == .imageEdit || node.kind == .seedreamEdit || node.kind == .imageToVideo || node.kind == .seedanceImageToVideo || node.kind == .wanAnimateMove || node.kind == .wanAnimateReplace {
+        // if node.kind == .imageGeneration || node.kind == .imageEdit || node.kind == .seedreamEdit || node.kind == .klingVideo25TurboPro || node.kind == .seedanceImageToVideo || node.kind == .wanAnimateMove || node.kind == .wanAnimateReplace {
         //     return AdapterRegistry.shared.getAdapter(for: "FAL") ?? FALAdapter()
         // }
         if node.kind == .openaiSora {

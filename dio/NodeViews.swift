@@ -1464,7 +1464,7 @@ struct OutputPlaceholderView: View {
 
     private var isVideoOutputNode: Bool {
         switch nodeKind {
-        case .openaiSora, .seedanceImageToVideo, .wanAnimateMove, .wanAnimateReplace, .imageToVideo:
+        case .openaiSora, .seedanceImageToVideo, .wanAnimateMove, .wanAnimateReplace, .klingVideo25TurboPro:
             return true
         default:
             return false

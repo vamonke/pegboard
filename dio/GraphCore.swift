@@ -81,7 +81,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
     public static let imageEdit = NodeKind(rawValue: "image_edit")
     public static let seedreamEdit = NodeKind(rawValue: "seedream_edit")
     public static let openaiSora = NodeKind(rawValue: "video_generation")
-    public static let imageToVideo = NodeKind(rawValue: "image_to_video")
+    public static let klingVideo25TurboPro = NodeKind(rawValue: "image_to_video")
     public static let seedanceImageToVideo = NodeKind(rawValue: "seedance_image_to_video")
     public static let imageUpload = NodeKind(rawValue: "image_upload")
     public static let videoUpload = NodeKind(rawValue: "video_upload")
@@ -128,14 +128,14 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .textPrompt: return "Prompt"
         case .imageGeneration: return "Flux - Schnell"
         case .imageEdit: return "Nano Banana - Edit"
-        case .seedreamEdit: return "SeedDream v4 - Edit"
+        case .seedreamEdit: return "Seedream v4 - Edit"
         case .openaiSora: return "OpenAI - Sora 2"
-        case .imageToVideo: return "Kling - Image to Video"
-        case .seedanceImageToVideo: return "Seedance - Image to Video"
+        case .klingVideo25TurboPro: return "Kling 2.5 - Image to Video"
+        case .seedanceImageToVideo: return "Seedance v1 Pro - Image to Video"
         case .imageUpload: return "Image"
         case .videoUpload: return "Video"
-        case .wanAnimateMove: return "WAN - Animate Move"
-        case .wanAnimateReplace: return "WAN - Animate Replace"
+        case .wanAnimateMove: return "WAN 2.2 - Animate Move"
+        case .wanAnimateReplace: return "WAN 2.2 - Animate Replace"
         default: return rawValue.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
@@ -147,7 +147,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .imageEdit: return "photo"
         case .seedreamEdit: return "photo"
         case .openaiSora: return "film"
-        case .imageToVideo: return "film"
+        case .klingVideo25TurboPro: return "film"
         case .seedanceImageToVideo: return "film"
         case .imageUpload: return "photo"
         case .videoUpload: return "film"
@@ -448,7 +448,7 @@ public extension Node {
             case "input_reference": return "/input_reference"
             default: return "/\(targetPort.name)"
             }
-        case .imageToVideo:
+        case .klingVideo25TurboPro:
             switch targetPort.name {
             case "prompt": return "/prompt"
             case "image_url": return "/image_url"
@@ -879,7 +879,7 @@ extension Node {
     }
     
     // Create an Image->Video node (FAL Kling)
-    public static func imageToVideo(
+    public static func klingVideo25TurboPro(
         id: UUID = UUID(),
         frame: CGRect,
         prompt: String = "",
@@ -910,7 +910,7 @@ extension Node {
         
         return Node(
             id: id,
-            kind: .imageToVideo,
+            kind: .klingVideo25TurboPro,
             frame: frame,
             args: args,
             ports: ports

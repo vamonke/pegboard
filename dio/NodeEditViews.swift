@@ -73,8 +73,8 @@ struct NodeEditSheet: View {
                                 self.commitEdits = closure
                             }
                         )
-                    case .imageToVideo:
-                        ImageToVideoEditView(
+                    case .klingVideo25TurboPro:
+                        klingVideo25TurboProEditView(
                             node: $tempNode,
                             onRegisterCommit: { closure in
                                 self.commitEdits = closure
@@ -618,7 +618,7 @@ struct OpenaiSoraEditView: View {
 }
 
 // Image → Video (FAL Kling) Edit View
-struct ImageToVideoEditView: View {
+struct klingVideo25TurboProEditView: View {
     @SwiftUI.Binding var node: Node
     let onRegisterCommit: (@escaping () -> Void) -> Void
 
