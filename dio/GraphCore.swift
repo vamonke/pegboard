@@ -454,6 +454,13 @@ public extension Node {
             case "image_url": return "/image_url"
             default: return "/\(targetPort.name)"
             }
+        case .seedanceImageToVideo:
+            switch targetPort.name {
+            case "prompt": return "/prompt"
+            case "image_url": return "/image_url"
+            case "end_image_url": return "/end_image_url"
+            default: return "/\(targetPort.name)"
+            }
         case .wanAnimateMove:
             switch targetPort.name {
             case "video_url": return "/video_url"
@@ -966,6 +973,7 @@ extension Node {
         endImageURL: String? = nil
     ) -> Node {
         let ports = [
+            PortDef(name: "prompt", dtype: .string, direction: "in"),
             PortDef(name: "image_url", dtype: .image, direction: "in"),
             PortDef(name: "end_image_url", dtype: .image, direction: "in"),
             PortDef(name: "video_output", dtype: .video, direction: "out", mimeType: "video/mp4")
