@@ -165,39 +165,43 @@ public class MockAdapter: CloudAdapter {
     public func poll(jobID: String, credentialID: UUID) async throws -> InvocationResponse {
         // Simulate polling delay
         try await Task.sleep(nanoseconds: 1_000_000_000) // 1.0 seconds
-        
-        return try jobQueue.sync {
+
+        var result: Result<InvocationResponse, Error> = .failure(AdapterError.jobNotFound(jobID))
+        jobQueue.sync {
             guard let job = activeJobs[jobID] else {
                 print("MockAdapter: Job not found: \(jobID)")
-                throw AdapterError.jobNotFound(jobID)
+                result = .failure(AdapterError.jobNotFound(jobID))
+                return
             }
-            
+
             print("MockAdapter: Polling job \(jobID), completed: \(job.isCompleted)")
-            
             if job.isCompleted {
                 activeJobs.removeValue(forKey: jobID)
                 print("MockAdapter: Job \(jobID) completed, returning response")
-                return job.response
+                result = .success(job.response)
             } else {
                 print("MockAdapter: Job \(jobID) still running")
-                return InvocationResponse(
-                    status: "running",
-                    jobID: jobID
-                )
+                result = .success(InvocationResponse(status: "running", jobID: jobID))
             }
+        }
+
+        switch result {
+        case .success(let response):
+            return response
+        case .failure(let error):
+            throw error
         }
     }
     
     public func cancel(jobID: String, credentialID: UUID) async throws -> Bool {
-        return try jobQueue.sync {
-            guard let job = activeJobs[jobID] else {
-                return false
-            }
-            
+        var success = false
+        jobQueue.sync {
+            guard let job = activeJobs[jobID] else { return }
             job.cancel()
             activeJobs.removeValue(forKey: jobID)
-            return true
+            success = true
         }
+        return success
     }
     
     // MARK: - Private Methods
@@ -238,14 +242,14 @@ public class MockAdapter: CloudAdapter {
             do {
                 print("MockAdapter: Starting async processing for job \(jobID)")
                 let response = try await self.processAsyncJob(job)
-                await self.jobQueue.sync(flags: .barrier) {
+                self.jobQueue.sync(flags: .barrier) {
                     job.response = response
                     job.isCompleted = true
                     print("MockAdapter: Job \(jobID) completed successfully")
                 }
             } catch {
                 print("MockAdapter: Job \(jobID) failed with error: \(error)")
-                await self.jobQueue.sync(flags: .barrier) {
+                self.jobQueue.sync(flags: .barrier) {
                     job.response = InvocationResponse(
                         status: "failed",
                         errorCode: "PROCESSING_ERROR",
@@ -295,9 +299,6 @@ public class MockAdapter: CloudAdapter {
             return try await generateImageResponse(request)
             
         case let id where id.contains("video"):
-            if modelID.contains("video_concat") {
-                return try await generateVideoConcatResponse(request)
-            }
             return try await generateVideoResponse(request)
             
         case let id where id.contains("async"):
@@ -413,103 +414,7 @@ public class MockAdapter: CloudAdapter {
         )
     }
 
-    // MARK: - Local Video Concat (AVFoundation)
-    private func generateVideoConcatResponse(_ request: InvocationRequest) async throws -> InvocationResponse {
-        // Gather up to 4 input video URLs
-        var uris: [String] = []
-        if let v1: String = request.params.get("/video_url_1", as: String.self), !v1.isEmpty { uris.append(v1) }
-        if let v2: String = request.params.get("/video_url_2", as: String.self), !v2.isEmpty { uris.append(v2) }
-        if let v3: String = request.params.get("/video_url_3", as: String.self), !v3.isEmpty { uris.append(v3) }
-        if let v4: String = request.params.get("/video_url_4", as: String.self), !v4.isEmpty { uris.append(v4) }
-        let inputURLs = uris.compactMap { URL(string: $0) }
-        guard !inputURLs.isEmpty else {
-            return InvocationResponse(
-                status: "failed",
-                errorCode: "NO_INPUT",
-                errorMessage: "No input videos provided for concat"
-            )
-        }
-        
-        let outputURL = try await concatenateVideos(inputURLs: inputURLs)
-        let data = try Data(contentsOf: outputURL)
-        let artifact = try artifactManager.storeArtifact(
-            data: data,
-            kind: "video",
-            mimeType: "video/mp4"
-        )
-        persistence.storeArtifact(artifact)
-        
-        return InvocationResponse(
-            status: "succeeded",
-            outputs: .object([
-                "video_count": .number(1),
-                "parts": .number(Double(inputURLs.count))
-            ]),
-            artifacts: [
-                ArtifactRef(
-                    kind: "video",
-                    mimeType: "video/mp4",
-                    uri: artifact.uri
-                )
-            ],
-            billedUSD: Decimal(0)
-        )
-    }
-
-    private func concatenateVideos(inputURLs: [URL]) async throws -> URL {
-        let composition = AVMutableComposition()
-        let videoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
-        let audioTrack = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
-        var currentTime = CMTime.zero
-        
-        for url in inputURLs {
-            let asset = AVURLAsset(url: url)
-        let vTracks = try await asset.loadTracks(withMediaType: .video)
-        if let srcVideo = vTracks.first {
-            let duration = try await asset.load(.duration)
-            let timeRange = CMTimeRange(start: .zero, duration: duration)
-                try videoTrack?.insertTimeRange(timeRange, of: srcVideo, at: currentTime)
-            }
-        let aTracks = try await asset.loadTracks(withMediaType: .audio)
-        if let srcAudio = aTracks.first {
-            let duration = try await asset.load(.duration)
-            let timeRange = CMTimeRange(start: .zero, duration: duration)
-                try audioTrack?.insertTimeRange(timeRange, of: srcAudio, at: currentTime)
-            }
-        currentTime = currentTime + (try await asset.load(.duration))
-        }
-        
-        let tempDir = FileManager.default.temporaryDirectory
-        let outURL = tempDir.appendingPathComponent("concat_\(UUID().uuidString).mp4")
-        if FileManager.default.fileExists(atPath: outURL.path) {
-            try? FileManager.default.removeItem(at: outURL)
-        }
-        guard let exporter = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
-            throw AdapterError.invalidRequest("Failed to create export session")
-        }
-        exporter.outputURL = outURL
-        exporter.outputFileType = .mp4
-        exporter.shouldOptimizeForNetworkUse = true
-
-        if #available(iOS 18.0, *) {
-            // Use new async exporting API
-            try await exporter.export(to: outURL, as: .mpeg4Movie)
-            return outURL
-        } else {
-            return try await withCheckedThrowingContinuation { continuation in
-                exporter.exportAsynchronously {
-                    switch exporter.status {
-                    case .completed:
-                        continuation.resume(returning: outURL)
-                    case .failed, .cancelled:
-                        continuation.resume(throwing: AdapterError.invalidRequest(exporter.error?.localizedDescription ?? "Export failed"))
-                    default:
-                        break
-                    }
-                }
-            }
-        }
-    }
+    // (Removed) Local Video Concat implementation
     
     // MARK: - Mock Data Generation
     

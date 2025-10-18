@@ -422,6 +422,14 @@ public class ExecutionEngine: ObservableObject {
                 endpoint: "/fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
                 mode: "async"
             )
+        } else if node.kind == .seedanceImageToVideo {
+            // FAL Seedance Pro image-to-video
+            modelRef = ModelRef(
+                provider: "FAL",
+                modelID: "fal-ai/bytedance/seedance/v1/pro/image-to-video",
+                endpoint: "/fal-ai/bytedance/seedance/v1/pro/image-to-video",
+                mode: "async"
+            )
         } else if node.kind == .wanAnimateMove {
             // FAL WAN animate/move
             modelRef = ModelRef(
@@ -437,14 +445,6 @@ public class ExecutionEngine: ObservableObject {
                 modelID: "fal-ai/wan/v2.2-14b/animate/replace",
                 endpoint: "/fal-ai/wan/v2.2-14b/animate/replace",
                 mode: "async"
-            )
-        } else if node.kind == .videoConcat {
-            // Local tool node executed via Mock adapter with specific model id
-            modelRef = ModelRef(
-                provider: "Mock",
-                modelID: "video_concat",
-                endpoint: "/execute",
-                mode: "sync"
             )
         } else {
             modelRef = ModelRef(

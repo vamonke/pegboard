@@ -23,6 +23,8 @@ public class FALAdapter: CloudAdapter {
             input = await buildNanoBananaEditInput(from: request.params)
         } else if request.model.modelID.contains("bytedance/seedream/v4/edit") {
             input = await buildSeedDreamV4EditInput(from: request.params)
+        } else if request.model.modelID.contains("bytedance/seedance/v1/pro/image-to-video") {
+            input = await buildSeedanceImageToVideoInput(from: request.params)
         } else if request.model.modelID.contains("kling-video") && request.model.modelID.contains("image-to-video") {
             input = await buildKlingImageToVideoInput(from: request.params)
         } else if request.model.modelID.contains("wan/v2.2-14b/animate/move") {
@@ -406,6 +408,40 @@ public class FALAdapter: CloudAdapter {
             "cfg_scale": .double(cfgScale),
             "negative_prompt": .string(negative)
         ]
+        return .dict(dict)
+    }
+
+    private func buildSeedanceImageToVideoInput(from params: JSONValue) async -> Payload {
+        // Matches FAL OpenAPI for fal-ai/bytedance/seedance/v1/pro/image-to-video
+        // Required: prompt, image_url
+        // Optional: duration("3".."12"), aspect_ratio("21:9"|"16:9"|"4:3"|"1:1"|"3:4"|"9:16"|"auto"),
+        // resolution("480p"|"720p"|"1080p"), camera_fixed(bool), enable_safety_checker(bool), seed(int), end_image_url(string)
+
+        let prompt = params.get("/prompt", as: String.self) ?? ""
+        let duration = params.get("/duration", as: String.self) ?? "5"
+        let aspectRatio = params.get("/aspect_ratio", as: String.self) ?? "auto"
+        let resolution = params.get("/resolution", as: String.self) ?? "1080p"
+        let cameraFixed = params.get("/camera_fixed", as: Bool.self) ?? false
+        let enableSafety = params.get("/enable_safety_checker", as: Bool.self) ?? true
+        let seed = params.get("/seed", as: Int.self)
+        let endImageUrl = params.get("/end_image_url", as: String.self)
+        let imageUrl = params.get("/image_url", as: String.self) ?? ""
+
+        let preparedImageUrl = await uploadIfNeeded(imageUrl) ?? imageUrl
+        var dict: [String: Payload] = [
+            "prompt": .string(prompt),
+            "duration": .string(duration),
+            "aspect_ratio": .string(aspectRatio),
+            "resolution": .string(resolution),
+            "camera_fixed": .bool(cameraFixed),
+            "enable_safety_checker": .bool(enableSafety),
+            "image_url": .string(preparedImageUrl)
+        ]
+        if let seed = seed { dict["seed"] = .int(seed) }
+        if let end = endImageUrl, !end.isEmpty {
+            let preparedEndUrl = await uploadIfNeeded(end) ?? end
+            dict["end_image_url"] = .string(preparedEndUrl)
+        }
         return .dict(dict)
     }
 

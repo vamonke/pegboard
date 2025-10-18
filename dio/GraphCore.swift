@@ -82,11 +82,11 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
     public static let seedreamEdit = NodeKind(rawValue: "seedream_edit")
     public static let videoGeneration = NodeKind(rawValue: "video_generation")
     public static let imageToVideo = NodeKind(rawValue: "image_to_video")
+    public static let seedanceImageToVideo = NodeKind(rawValue: "seedance_image_to_video")
     public static let imageUpload = NodeKind(rawValue: "image_upload")
     public static let videoUpload = NodeKind(rawValue: "video_upload")
     public static let wanAnimateMove = NodeKind(rawValue: "wan_animate_move")
     public static let wanAnimateReplace = NodeKind(rawValue: "wan_animate_replace")
-    public static let videoConcat = NodeKind(rawValue: "video_concat")
     
     // Node category determines execution behavior
     public var category: NodeCategory {
@@ -131,11 +131,11 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .seedreamEdit: return "SeedDream v4 - Edit"
         case .videoGeneration: return "OpenAI - Sora 2"
         case .imageToVideo: return "Kling - Image to Video"
+        case .seedanceImageToVideo: return "Seedance - Image to Video"
         case .imageUpload: return "Image"
         case .videoUpload: return "Video"
         case .wanAnimateMove: return "WAN - Animate Move"
         case .wanAnimateReplace: return "WAN - Animate Replace"
-        case .videoConcat: return "Concat Video"
         default: return rawValue.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
@@ -148,11 +148,11 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .seedreamEdit: return "photo"
         case .videoGeneration: return "film"
         case .imageToVideo: return "film"
+        case .seedanceImageToVideo: return "film"
         case .imageUpload: return "photo"
         case .videoUpload: return "film"
         case .wanAnimateMove: return "film"
         case .wanAnimateReplace: return "film"
-        case .videoConcat: return "film"
         default: return "circle"
         }
     }
@@ -738,33 +738,6 @@ extension Node {
         )
     }
     
-    // Create a Video Concat node (local processing)
-    public static func videoConcat(
-        id: UUID = UUID(),
-        frame: CGRect
-    ) -> Node {
-        let ports = [
-            PortDef(name: "video_url_1", dtype: .video, direction: "in"),
-            PortDef(name: "video_url_2", dtype: .video, direction: "in"),
-            PortDef(name: "video_url_3", dtype: .video, direction: "in"),
-            PortDef(name: "video_url_4", dtype: .video, direction: "in"),
-            PortDef(name: "video_output", dtype: .video, direction: "out", mimeType: "video/mp4")
-        ]
-        let args: JSONValue = .object([
-            "video_url_1": .null,
-            "video_url_2": .null,
-            "video_url_3": .null,
-            "video_url_4": .null
-        ])
-        return Node(
-            id: id,
-            kind: .videoConcat,
-            frame: frame,
-            args: args,
-            ports: ports
-        )
-    }
-
     // Create an ImageGeneration node with default ports and args
     public static func imageGeneration(
         id: UUID = UUID(),
@@ -972,6 +945,45 @@ extension Node {
         return Node(
             id: id,
             kind: .wanAnimateMove,
+            frame: frame,
+            args: args,
+            ports: ports
+        )
+    }
+
+    // Create a Seedance Image->Video node (FAL Seedance Pro)
+    public static func seedanceImageToVideo(
+        id: UUID = UUID(),
+        frame: CGRect,
+        prompt: String = "",
+        imageURL: String? = nil,
+        duration: String = "5",
+        aspectRatio: String = "auto",
+        resolution: String = "1080p",
+        cameraFixed: Bool = false,
+        enableSafetyChecker: Bool = true,
+        seed: Int? = nil,
+        endImageURL: String? = nil
+    ) -> Node {
+        let ports = [
+            PortDef(name: "image_url", dtype: .image, direction: "in"),
+            PortDef(name: "video_output", dtype: .video, direction: "out", mimeType: "video/mp4")
+        ]
+        var argsObj: [String: JSONValue] = [
+            "prompt": .string(prompt),
+            "duration": .string(duration),
+            "aspect_ratio": .string(aspectRatio),
+            "resolution": .string(resolution),
+            "camera_fixed": .bool(cameraFixed),
+            "enable_safety_checker": .bool(enableSafetyChecker)
+        ]
+        argsObj["image_url"] = imageURL != nil ? .string(imageURL!) : .null
+        if let seed = seed { argsObj["seed"] = .number(Double(seed)) }
+        if let end = endImageURL { argsObj["end_image_url"] = .string(end) }
+        let args: JSONValue = .object(argsObj)
+        return Node(
+            id: id,
+            kind: .seedanceImageToVideo,
             frame: frame,
             args: args,
             ports: ports

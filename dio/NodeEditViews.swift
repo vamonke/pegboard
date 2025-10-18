@@ -80,6 +80,13 @@ struct NodeEditSheet: View {
                                 self.commitEdits = closure
                             }
                         )
+                    case .seedanceImageToVideo:
+                        SeedanceImageToVideoEditView(
+                            node: $tempNode,
+                            onRegisterCommit: { closure in
+                                self.commitEdits = closure
+                            }
+                        )
                     case .wanAnimateMove:
                         WanAnimateMoveEditView(
                             node: $tempNode,
@@ -705,6 +712,125 @@ struct ImageToVideoEditView: View {
                 node.setArg("/duration", value: self.localDuration)
                 node.setArg("/cfg_scale", value: self.localCfgScale)
                 node.setArg("/negative_prompt", value: self.localNegative)
+            }
+        }
+    }
+}
+
+// Seedance Image → Video Edit View
+struct SeedanceImageToVideoEditView: View {
+    @SwiftUI.Binding var node: Node
+    let onRegisterCommit: (@escaping () -> Void) -> Void
+
+    @State private var localPrompt: String = ""
+    @State private var localImageURL: String = ""
+    @State private var localDuration: String = "5" // 3..12
+    @State private var localAspect: String = "auto"
+    @State private var localResolution: String = "1080p"
+    @State private var localCameraFixed: Bool = false
+    @State private var localEnableSafety: Bool = true
+    @State private var setSeedManually: Bool = false
+    @State private var localSeed: Int = 0
+    @State private var localEndImageURL: String = ""
+
+    private let durationOptions: [String] = ["3","4","5","6","7","8","9","10","11","12"]
+    private let aspectOptions: [String] = ["21:9","16:9","4:3","1:1","3:4","9:16","auto"]
+    private let resolutionOptions: [String] = ["480p","720p","1080p"]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Prompt
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Prompt").font(.subheadline).fontWeight(.medium)
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $localPrompt).frame(minHeight: 80).padding(0)
+                    if localPrompt.isEmpty {
+                        Text("Describe the motion you want...")
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 8)
+                            .allowsHitTesting(false)
+                    }
+                }
+            }
+
+            // Image URL
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Image URL").font(.subheadline).fontWeight(.medium)
+                TextField("https://... (jpeg/png/webp)", text: $localImageURL)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            }
+
+            // Duration
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Duration").font(.subheadline).fontWeight(.medium)
+                Picker("Duration", selection: $localDuration) {
+                    ForEach(durationOptions, id: \.self) { opt in
+                        Text("\(opt) seconds").tag(opt)
+                    }
+                }.pickerStyle(.segmented)
+            }
+
+            // Aspect ratio
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Aspect Ratio").font(.subheadline).fontWeight(.medium)
+                Picker("Aspect Ratio", selection: $localAspect) {
+                    ForEach(aspectOptions, id: \.self) { opt in
+                        Text(opt).tag(opt)
+                    }
+                }.pickerStyle(.menu)
+            }
+
+            // Resolution
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Resolution").font(.subheadline).fontWeight(.medium)
+                Picker("Resolution", selection: $localResolution) {
+                    ForEach(resolutionOptions, id: \.self) { opt in
+                        Text(opt).tag(opt)
+                    }
+                }.pickerStyle(.segmented)
+            }
+
+            // Camera fixed & safety
+            Toggle("Fix Camera Position", isOn: $localCameraFixed)
+            Toggle("Enable Safety Checker", isOn: $localEnableSafety)
+
+            // Seed
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Set Seed", isOn: $setSeedManually)
+                if setSeedManually {
+                    Stepper(value: $localSeed, in: 0...1_000_000) { Text("Seed: \(localSeed)") }
+                }
+            }
+
+            // End image URL
+            VStack(alignment: .leading, spacing: 8) {
+                Text("End Image URL (optional)").font(.subheadline).fontWeight(.medium)
+                TextField("https://...", text: $localEndImageURL)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            }
+        }
+        .onAppear {
+            self.localPrompt = node.getArg("/prompt", as: String.self) ?? ""
+            self.localImageURL = node.getArg("/image_url", as: String.self) ?? ""
+            self.localDuration = node.getArg("/duration", as: String.self) ?? "5"
+            self.localAspect = node.getArg("/aspect_ratio", as: String.self) ?? "auto"
+            self.localResolution = node.getArg("/resolution", as: String.self) ?? "1080p"
+            self.localCameraFixed = node.getArg("/camera_fixed", as: Bool.self) ?? false
+            self.localEnableSafety = node.getArg("/enable_safety_checker", as: Bool.self) ?? true
+            if let seed = node.getArg("/seed", as: Int.self) { self.setSeedManually = true; self.localSeed = seed } else { self.setSeedManually = false }
+            self.localEndImageURL = node.getArg("/end_image_url", as: String.self) ?? ""
+
+            onRegisterCommit {
+                node.setArg("/prompt", value: self.localPrompt)
+                node.setArg("/image_url", value: self.localImageURL)
+                node.setArg("/duration", value: self.localDuration)
+                node.setArg("/aspect_ratio", value: self.localAspect)
+                node.setArg("/resolution", value: self.localResolution)
+                node.setArg("/camera_fixed", value: self.localCameraFixed)
+                node.setArg("/enable_safety_checker", value: self.localEnableSafety)
+                if self.setSeedManually { node.setArg("/seed", value: self.localSeed) }
+                if !self.localEndImageURL.isEmpty { node.setArg("/end_image_url", value: self.localEndImageURL) }
             }
         }
     }
