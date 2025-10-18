@@ -29,6 +29,14 @@ struct ContentView: View {
     @State private var selectedNodeForOutputPreview: UUID?
     @State private var editingTextPromptNodeID: UUID?
     @State private var showArtifactGallery: Bool = false
+    // Add Node hierarchical menu state
+    private enum AddMenuLevel {
+        case root
+        case upload
+        case image
+        case video
+    }
+    @State private var addMenuLevel: AddMenuLevel = .root
     
     // Execution state
     @StateObject private var executionEngine = ExecutionEngine.shared
@@ -53,6 +61,7 @@ struct ContentView: View {
                     HStack {
                         Spacer()
                         Button(action: {
+                            addMenuLevel = .root
                             isNodeCreationMenuPresented = true
                         }) {
                             Image(systemName: "plus")
@@ -118,7 +127,9 @@ struct ContentView: View {
         )) {
             textPromptEditSheetView()
         }
-        .sheet(isPresented: $isNodeCreationMenuPresented) {
+        .sheet(isPresented: $isNodeCreationMenuPresented, onDismiss: {
+            addMenuLevel = .root
+        }) {
             nodeCreationMenuSheet()
         }
         .sheet(isPresented: $showRunHistory) {
@@ -444,174 +455,131 @@ struct ContentView: View {
     }
     
     private func nodeCreationMenuSheet() -> some View {
-        VStack(spacing: 20) {
-            // Text("Add Node")
-            //     .font(.title2)
-            //     .fontWeight(.semibold)
-            //     .padding(.top)
-            
+        VStack(spacing: 16) {
+            HStack {
+                if addMenuLevel != .root {
+                    Button(action: {
+                        addMenuLevel = .root
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "chevron.left")
+                            Text("Back")
+                        }
+                    }
+                }
+                Spacer()
+                Button("Cancel") {
+                    isNodeCreationMenuPresented = false
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top)
+
             ScrollView {
-                VStack(spacing: 16) {                
-                    Button(action: {
-                        addNode(of: .imageUpload, at: canvasCenterPosition())
-                        isNodeCreationMenuPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: "photo.on.rectangle")
-                                .font(.title2)
-                            Text("Upload Image")
-                                .font(.headline)
-                            Spacer()
+                VStack(spacing: 12) {
+                    switch addMenuLevel {
+                    case .root:
+                        Group {
+                            menuCategoryButton(icon: "square.and.arrow.up.on.square", title: "Upload") {
+                                addMenuLevel = .upload
+                            }
+                            menuCategoryButton(icon: "photo.on.rectangle", title: "Image") {
+                                addMenuLevel = .image
+                            }
+                            menuCategoryButton(icon: "video", title: "Video") {
+                                addMenuLevel = .video
+                            }
+                            menuLeafButton(icon: "character", title: "Text Prompt") {
+                                addNode(of: .textPrompt, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
                         }
-                        .foregroundColor(.primary)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
 
-                    Button(action: {
-                        addNode(of: .videoUpload, at: canvasCenterPosition())
-                        isNodeCreationMenuPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: "video")
-                                .font(.title2)
-                            Text("Upload Video")
-                                .font(.headline)
-                            Spacer()
+                    case .upload:
+                        Group {
+                            menuLeafButton(icon: "photo.on.rectangle", title: "Upload Image") {
+                                addNode(of: .imageUpload, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
+                            menuLeafButton(icon: "video", title: "Upload Video") {
+                                addNode(of: .videoUpload, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
                         }
-                        .foregroundColor(.primary)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
 
-                    Button(action: {
-                        addNode(of: .imageGeneration, at: canvasCenterPosition())
-                        isNodeCreationMenuPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: "photo")
-                                .font(.title2)
-                            Text("Image Generation")
-                                .font(.headline)
-                            Spacer()
+                    case .image:
+                        Group {
+                            menuLeafButton(icon: "photo", title: "Text → Image") {
+                                addNode(of: .imageGeneration, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
+                            menuLeafButton(icon: "photo.badge.plus", title: "Edit Image") {
+                                addNode(of: .imageEdit, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
                         }
-                        .foregroundColor(.primary)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
-                
-                    Button(action: {
-                        addNode(of: .videoGeneration, at: canvasCenterPosition())
-                        isNodeCreationMenuPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: "video")
-                                .font(.title2)
-                            Text("Video Generation - OpenAI Sora 2")
-                                .font(.headline)
-                            Spacer()
-                        }
-                        .foregroundColor(.primary)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
-                
-                    Button(action: {
-                        addNode(of: .imageToVideo, at: canvasCenterPosition())
-                        isNodeCreationMenuPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: "video")
-                                .font(.title2)
-                            Text("Image → Video - Kling 2.5")
-                                .font(.headline)
-                            Spacer()
-                        }
-                        .foregroundColor(.primary)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
-                    Button(action: {
-                        addNode(of: .wanAnimateReplace, at: canvasCenterPosition())
-                        isNodeCreationMenuPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: "video")
-                                .font(.title2)
-                            Text("Animate Replace - Wan 2.2")
-                                .font(.headline)
-                            Spacer()
-                        }
-                        .foregroundColor(.primary)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
 
-                    Button(action: {
-                        addNode(of: .wanAnimateMove, at: canvasCenterPosition())
-                        isNodeCreationMenuPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: "video")
-                                .font(.title2)
-                            Text("Animate Move - Wan 2.2")
-                                .font(.headline)
-                            Spacer()
+                    case .video:
+                        Group {
+                            menuLeafButton(icon: "video", title: "Video Generation – OpenAI Sora 2") {
+                                addNode(of: .videoGeneration, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
+                            menuLeafButton(icon: "video", title: "Image → Video – Kling 2.5") {
+                                addNode(of: .imageToVideo, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
+                            menuLeafButton(icon: "video", title: "Animate Replace – Wan 2.2") {
+                                addNode(of: .wanAnimateReplace, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
+                            menuLeafButton(icon: "video", title: "Animate Move – Wan 2.2") {
+                                addNode(of: .wanAnimateMove, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
                         }
-                        .foregroundColor(.primary)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
-
-
-                    Button(action: {
-                        addNode(of: .imageEdit, at: canvasCenterPosition())
-                        isNodeCreationMenuPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: "photo.badge.plus")
-                                .font(.title2)
-                            Text("Edit Image")
-                                .font(.headline)
-                            Spacer()
-                        }
-                        .foregroundColor(.primary)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
-
-                    Button(action: {
-                        addNode(of: .textPrompt, at: canvasCenterPosition())
-                        isNodeCreationMenuPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: "character")
-                                .font(.title2)
-                            Text("Text Prompt")
-                                .font(.headline)
-                            Spacer()
-                        }
-                        .foregroundColor(.primary)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
                     }
                 }
                 .padding(.horizontal)
-                .padding(.top)
                 .padding(.bottom)
             }
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+
+    private func menuCategoryButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.title2)
+                Text(title)
+                    .font(.headline)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.secondary)
+            }
+            .foregroundColor(.primary)
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+        }
+    }
+
+    private func menuLeafButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.title2)
+                Text(title)
+                    .font(.headline)
+                Spacer()
+            }
+            .foregroundColor(.primary)
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+        }
     }
     
     private func runHistorySheetView() -> some View {
@@ -747,6 +715,7 @@ struct ContentView: View {
         let available = getAvailableInputPorts(for: port)
         if available.isEmpty {
             DispatchQueue.main.async {
+                addMenuLevel = .root
                 self.isNodeCreationMenuPresented = true
             }
         }
