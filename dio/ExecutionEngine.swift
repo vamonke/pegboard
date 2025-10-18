@@ -99,14 +99,14 @@ public class ExecutionEngine: ObservableObject {
     
     public func getLatestOutputsForNode(_ nodeID: UUID) -> [Artifact] {
         guard let latestRun = getLatestRunForNode(nodeID) else { 
-            print("🔍 ExecutionEngine - No latest run found for node: \(nodeID)")
+            // print("🔍 ExecutionEngine - No latest run found for node: \(nodeID)")
             return [] 
         }
         let artifacts = persistence.getArtifactsForRun(latestRun.id)
-        print("🔍 ExecutionEngine - Found \(artifacts.count) artifacts for run \(latestRun.id)")
-        for (index, artifact) in artifacts.enumerated() {
-            print("🔍 ExecutionEngine - Artifact \(index): \(artifact.displayName), URI: \(artifact.uri)")
-        }
+        // print("🔍 ExecutionEngine - Found \(artifacts.count) artifacts for run \(latestRun.id)")
+        // for (index, artifact) in artifacts.enumerated() {
+        //     print("🔍 ExecutionEngine - Artifact \(index): \(artifact.displayName), URI: \(artifact.uri)")
+        // }
         return artifacts
     }
     
@@ -641,9 +641,14 @@ public class ExecutionEngine: ObservableObject {
         } else if response.status == "failed" {
             updatedRun = handleFailedResponse(response, run: updatedRun)
             print("[ExecutionEngine] Run failed runId=\(updatedRun.id) code=\(updatedRun.errorCode ?? "nil") message=\(updatedRun.errorMessage ?? "nil")")
+            print("[ExecutionEngine] Note: initial invoke failed (no poll). provider=\(adapter.provider) model=\(run.model.modelID) jobID=\(response.jobID ?? "nil")")
         } else if response.status == "queued" || response.status == "running" {
             // Handle async responses
             print("[ExecutionEngine] Async flow started jobId=\(response.jobID ?? "nil")")
+            // Persist jobID for later polling/retry
+            updatedRun.jobID = response.jobID
+            persistence.updateRun(updatedRun)
+            print("[ExecutionEngine] Saved jobID=\(updatedRun.jobID ?? "nil") for node=\(node.id). Entering poll loop…")
             updatedRun = try await handleAsyncResponse(response, run: updatedRun, adapter: adapter, node: node)
             print("[ExecutionEngine] Async flow finished status=\(updatedRun.status.rawValue)")
         }
@@ -703,13 +708,32 @@ public class ExecutionEngine: ObservableObject {
         
         // Poll for completion
         var pollCount = 0
-        let maxPolls = 300 // 5 minutes max (1s per poll)
+        let maxPolls = 600 // 10 minutes max (1s per poll)
         var localRun = run
         
         while pollCount < maxPolls {
             try Task.checkCancellation()
             print("[ExecutionEngine] Polling jobId=\(jobID) attempt=\(pollCount+1)/\(maxPolls)")
-            let pollResponse = try await adapter.poll(jobID: jobID, credentialID: UUID())
+            // Attempt poll; treat thrown errors as transient and allow manual retry
+            let pollResponse: InvocationResponse
+            do {
+                pollResponse = try await adapter.poll(jobID: jobID, credentialID: UUID())
+                // Clear any transient poll flags if previously set
+                localRun.pendingManualPoll = false
+                localRun.lastPollErrorCode = nil
+                localRun.lastPollErrorMessage = nil
+            } catch {
+                print("[ExecutionEngine] Poll error: \(error.localizedDescription)")
+                localRun.pendingManualPoll = true
+                localRun.lastPollErrorCode = (error as NSError).domain
+                localRun.lastPollErrorMessage = error.localizedDescription
+                persistence.updateRun(localRun)
+                await MainActor.run {
+                    let runSnapshot = localRun
+                    self.activeRuns[node.id] = runSnapshot
+                }
+                return localRun
+            }
             let progress = extractProgress(from: pollResponse)
             if let p = progress {
                 print(String(format: "[ExecutionEngine] Poll response status=%@ progress=%.1f%%", pollResponse.status, p))
@@ -763,6 +787,57 @@ public class ExecutionEngine: ObservableObject {
         localRun.errorMessage = "Async operation timed out"
         print("[ExecutionEngine] Async timeout jobId=\(jobID)")
         return localRun
+    }
+
+    // MARK: - Manual Poll Retry API
+    public func retryPolling(node: Node) async {
+        print("[ExecutionEngine] retryPolling requested for node=\(node.id)")
+        guard var latestRun = persistence.getRunsForNode(node.id).first else {
+            print("[ExecutionEngine] retryPolling: no runs found for node")
+            return
+        }
+        guard latestRun.status == .queued || latestRun.status == .running else {
+            print("[ExecutionEngine] retryPolling: run not in queued/running state; status=\(latestRun.status.rawValue)")
+            return
+        }
+        guard let jobID = latestRun.jobID else {
+            print("[ExecutionEngine] retryPolling: missing jobID; cannot poll")
+            return
+        }
+        let adapter = getAdapterForNode(node)
+        do {
+            let pollResponse = try await adapter.poll(jobID: jobID, credentialID: UUID())
+            print("[ExecutionEngine] retryPolling: received status=\(pollResponse.status)")
+            if pollResponse.status == "succeeded" {
+                let updated = try await handleSuccessfulResponse(pollResponse, run: latestRun, node: node)
+                persistence.updateRun(updated)
+                await MainActor.run { self.activeRuns[node.id] = updated }
+                print("[ExecutionEngine] retryPolling: run succeeded runId=\(updated.id)")
+            } else if pollResponse.status == "failed" {
+                let failed = handleFailedResponse(pollResponse, run: latestRun)
+                persistence.updateRun(failed)
+                await MainActor.run { self.activeRuns[node.id] = failed }
+                print("[ExecutionEngine] retryPolling: run failed runId=\(failed.id) code=\(failed.errorCode ?? "nil") message=\(failed.errorMessage ?? "nil")")
+            } else {
+                latestRun.status = (pollResponse.status == "running") ? .running : .queued
+                latestRun.outputsMeta = pollResponse.outputs ?? latestRun.outputsMeta
+                latestRun.adapterDebug = pollResponse.vendorMeta ?? latestRun.adapterDebug
+                latestRun.pendingManualPoll = false
+                latestRun.lastPollErrorCode = nil
+                latestRun.lastPollErrorMessage = nil
+                persistence.updateRun(latestRun)
+                await MainActor.run { self.activeRuns[node.id] = latestRun }
+                print("[ExecutionEngine] retryPolling: updated in-flight run status=\(latestRun.status.rawValue)")
+            }
+        } catch {
+            print("[ExecutionEngine] retryPolling: poll error=\(error.localizedDescription)")
+            latestRun.pendingManualPoll = true
+            latestRun.lastPollErrorCode = (error as NSError).domain
+            latestRun.lastPollErrorMessage = error.localizedDescription
+            persistence.updateRun(latestRun)
+            await MainActor.run { self.activeRuns[node.id] = latestRun }
+            print("[ExecutionEngine] retryPolling: re-marked pendingManualPoll for runId=\(latestRun.id)")
+        }
     }
 
     // MARK: - Progress Extraction

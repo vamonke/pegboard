@@ -40,6 +40,7 @@ public class FALAdapter: CloudAdapter {
         
         // Use endpoint model id as the FAL model identifier (e.g. "fal-ai/flux/dev")
         let modelID = request.model.modelID
+        print("[FALAdapter] invoke: provider=\(provider) model=\(modelID) endpoint=\(request.model.endpoint) mode=\(request.model.mode)")
         
         // WAN models are long-running; run in background and return a jobID for polling/resume
         if modelID.contains("wan/") {
@@ -47,6 +48,7 @@ public class FALAdapter: CloudAdapter {
             jobsQueue.async(flags: .barrier) {
                 self.jobLogs[jobID] = []
             }
+            print("[FALAdapter] starting WAN background job jobID=\(jobID) model=\(modelID)")
 
             let task: Task<InvocationResponse, Never>
 
@@ -121,6 +123,7 @@ public class FALAdapter: CloudAdapter {
                     guard let self = self else { return InvocationResponse(status: "failed", errorCode: "INTERNAL", errorMessage: "Adapter deallocated") }
                     var collectedLogs: [String] = []
                     do {
+                        print("[FALAdapter] subscribe begin (WAN) model=\(modelID) poll=1s timeout=15m includeLogs=true")
                         let result = try await fal.subscribe(
                             to: modelID,
                             input: input,
@@ -130,12 +133,18 @@ public class FALAdapter: CloudAdapter {
                             onQueueUpdate: { update in
                                 switch update {
                                 case let .inProgress(logs):
-                                    let logStrings = logs.map { String(describing: $0) }
-                                    collectedLogs.append(contentsOf: logStrings)
-                                    print("FAL[\(modelID)] logs: \(logStrings.joined(separator: " | "))")
+                                    let logStrings = logs.map { String(describing: $0) }.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                                    if !logStrings.isEmpty {
+                                        collectedLogs.append(contentsOf: logStrings)
+                                        print("FAL[\(modelID)] logs: \(logStrings.joined(separator: " | "))")
+                                    } else {
+                                        print("FAL[\(modelID)] logs: (none)")
+                                    }
                                 default:
                                     let line = String(describing: update)
-                                    collectedLogs.append(line)
+                                    if !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                        collectedLogs.append(line)
+                                    }
                                     print("FAL[\(modelID)] queue update: \(line)")
                                 }
                                 self.jobsQueue.async(flags: .barrier) {
@@ -144,6 +153,7 @@ public class FALAdapter: CloudAdapter {
                             }
                         )
                         let (artifacts, outputsMeta) = await self.extractArtifactsAndOutputs(from: result, originalPrompt: originalPrompt)
+                        print("[FALAdapter] subscribe success (WAN) model=\(modelID) artifacts=\(artifacts.count)")
                         let vendorMeta: JSONValue = .object([
                             "result": self.payloadToJSONValue(result) ?? .null,
                             "logs": .array(collectedLogs.map { .string($0) })
@@ -187,25 +197,127 @@ public class FALAdapter: CloudAdapter {
             return InvocationResponse(status: "queued", outputs: .object(["progress": .number(0)]), artifacts: nil, errorCode: nil, errorMessage: nil, billedUSD: nil, vendorMeta: .object(["logs": .array([])]), jobID: jobID)
         }
         
+        // NEW: Async-mode background job for non-WAN long-running models (e.g., kling/seedance)
+        if request.model.mode == "async" {
+            let jobID = "fal_\(UUID().uuidString)"
+            jobsQueue.async(flags: .barrier) {
+                self.jobLogs[jobID] = []
+            }
+            print("[FALAdapter] starting async background job jobID=\(jobID) model=\(modelID)")
+            let maxRetries = 3
+            let task = Task { [weak self] () -> InvocationResponse in
+                guard let self = self else { return InvocationResponse(status: "failed", errorCode: "INTERNAL", errorMessage: "Adapter deallocated") }
+                var collectedLogs: [String] = []
+                var lastError: Error? = nil
+                for attempt in 1...maxRetries {
+                    do {
+                        print("[FALAdapter] subscribe begin (async) model=\(modelID) attempt=\(attempt) poll=1s timeout=10m")
+                        let result = try await fal.subscribe(
+                            to: modelID,
+                            input: input,
+                            pollInterval: .seconds(1),
+                            timeout: .minutes(10),
+                            includeLogs: true,
+                            onQueueUpdate: { update in
+                                switch update {
+                                case let .inProgress(logs):
+                                    let logStrings = logs.map { String(describing: $0) }.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                                    if !logStrings.isEmpty {
+                                        collectedLogs.append(contentsOf: logStrings)
+                                        print("FAL[\(modelID)] logs: \(logStrings.joined(separator: " | "))")
+                                    } else {
+                                        print("FAL[\(modelID)] logs: (none)")
+                                    }
+                                default:
+                                    let line = String(describing: update)
+                                    if !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                        collectedLogs.append(line)
+                                    }
+                                    print("FAL[\(modelID)] queue update: \(line)")
+                                }
+                                self.jobsQueue.async(flags: .barrier) {
+                                    self.jobLogs[jobID] = collectedLogs
+                                }
+                            }
+                        )
+                        let (artifacts, outputsMeta) = await self.extractArtifactsAndOutputs(from: result, originalPrompt: originalPrompt)
+                        print("[FALAdapter] subscribe success (async) model=\(modelID) artifacts=\(artifacts.count)")
+                        let vendorMeta: JSONValue = .object([
+                            "result": self.payloadToJSONValue(result) ?? .null,
+                            "logs": .array(collectedLogs.map { .string($0) })
+                        ])
+                        let response = InvocationResponse(
+                            status: "succeeded",
+                            outputs: outputsMeta,
+                            artifacts: artifacts,
+                            billedUSD: nil,
+                            vendorMeta: vendorMeta,
+                            jobID: jobID
+                        )
+                        self.jobsQueue.async(flags: .barrier) {
+                            self.completedJobResults[jobID] = response
+                        }
+                        return response
+                    } catch {
+                        lastError = error
+                        print("[FALAdapter] subscribe error (async) model=\(modelID) attempt=\(attempt) error=\(error.localizedDescription)")
+                        if attempt < maxRetries {
+                            let backoffNs = UInt64(Double(1_000_000_000) * pow(2.0, Double(attempt - 1)))
+                            try? await Task.sleep(nanoseconds: backoffNs)
+                            continue
+                        }
+                    }
+                }
+                let error = lastError ?? NSError(domain: "FAL", code: -1)
+                let errorMeta: JSONValue = .object([
+                    "error": .string(String(describing: error)),
+                    "logs": .array(collectedLogs.map { .string($0) })
+                ])
+                print("[FALAdapter] subscribe failed (async) model=\(modelID) error=\(error.localizedDescription)")
+                let response = InvocationResponse(
+                    status: "failed",
+                    errorCode: "FAL_SUBSCRIBE_ERROR",
+                    errorMessage: (error as NSError).localizedDescription,
+                    vendorMeta: errorMeta,
+                    jobID: jobID
+                )
+                self.jobsQueue.async(flags: .barrier) {
+                    self.completedJobResults[jobID] = response
+                }
+                return response
+            }
+            jobsQueue.async(flags: .barrier) {
+                self.activeJobs[jobID] = task
+            }
+            return InvocationResponse(status: "queued", outputs: .object(["progress": .number(0)]), artifacts: nil, errorCode: nil, errorMessage: nil, billedUSD: nil, vendorMeta: .object(["logs": .array([])]), jobID: jobID)
+        }
+        
         // Default path: subscribe and await result (shorter models)
         var collectedLogs: [String] = []
         let result: Payload
         do {
+            print("[FALAdapter] subscribe begin model=\(modelID) poll=2s timeout=10m includeLogs=true")
             result = try await fal.subscribe(
                 to: modelID,
                 input: input,
-                pollInterval: .seconds(1),
-                timeout: .minutes(5),
+                pollInterval: .seconds(2),
+                timeout: .minutes(10),
                 includeLogs: true,
                 onQueueUpdate: { update in
                     switch update {
                     case let .inProgress(logs):
-                        let logStrings = logs.map { String(describing: $0) }
-                        collectedLogs.append(contentsOf: logStrings)
-                        print("FAL[\(modelID)] logs: \(logStrings.joined(separator: " | "))")
+                        let logStrings = logs.map { String(describing: $0) }.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                        if !logStrings.isEmpty {
+                            collectedLogs.append(contentsOf: logStrings)
+                            print("FAL[\(modelID)] logs: \(logStrings.joined(separator: " | "))")
+                        } else {
+                            print("FAL[\(modelID)] logs: (none)")
+                        }
                     default:
                         let line = String(describing: update)
-                        collectedLogs.append(line)
+                        if !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            collectedLogs.append(line)
+                        }
                         print("FAL[\(modelID)] queue update: \(line)")
                     }
                 }
@@ -216,6 +328,7 @@ public class FALAdapter: CloudAdapter {
                 "error": .string(String(describing: error)),
                 "logs": .array(collectedLogs.map { .string($0) })
             ])
+            print("[FALAdapter] subscribe failed (invoke) model=\(modelID) error=\(error.localizedDescription)")
             return InvocationResponse(
                 status: "failed",
                 errorCode: "FAL_SUBSCRIBE_ERROR",
@@ -224,6 +337,7 @@ public class FALAdapter: CloudAdapter {
             )
         }
         let (artifacts, outputsMeta) = await extractArtifactsAndOutputs(from: result, originalPrompt: originalPrompt)
+        print("[FALAdapter] subscribe success model=\(modelID) artifacts=\(artifacts.count)")
         let vendorMeta: JSONValue = .object([
             "result": payloadToJSONValue(result) ?? .null,
             "logs": .array(collectedLogs.map { .string($0) })
@@ -249,16 +363,20 @@ public class FALAdapter: CloudAdapter {
             jobsQueue.async(flags: .barrier) {
                 self.activeJobs.removeValue(forKey: jobID)
             }
+            print("[FALAdapter] poll: job finished jobID=\(jobID) status=\(finished.status)")
             return finished
         }
         if let task = task {
             if task.isCancelled {
+                print("[FALAdapter] poll: job cancelled jobID=\(jobID)")
                 return InvocationResponse(status: "cancelled", vendorMeta: .object(["logs": .array(logs.map { .string($0) })]), jobID: jobID)
             }
             // Task still running
+            print("[FALAdapter] poll: job running jobID=\(jobID)")
             return InvocationResponse(status: "running", outputs: .object(["progress": .number(0)]), vendorMeta: .object(["logs": .array(logs.map { .string($0) })]), jobID: jobID)
         }
         // Unknown job; treat as not found
+        print("[FALAdapter] poll: job not found jobID=\(jobID)")
         return InvocationResponse(status: "failed", errorCode: "JOB_NOT_FOUND", errorMessage: "Unknown job id", vendorMeta: .object(["logs": .array(logs.map { .string($0) })]), jobID: jobID)
     }
     
@@ -306,7 +424,7 @@ public class FALAdapter: CloudAdapter {
                 preparedUrls.append(urlString)
             }
         }
-
+        
         var dict: [String: Payload] = [
             "prompt": .string(prompt),
             "num_images": .int(numImages),

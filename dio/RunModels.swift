@@ -104,6 +104,11 @@ public struct Run: Codable, Identifiable, Equatable {
     public let nodeSchemaVersion: Int
     public let nodeArgsSnapshot: JSONValue
     public var adapterDebug: JSONValue?
+    // Async polling context
+    public var jobID: String?
+    public var pendingManualPoll: Bool?
+    public var lastPollErrorCode: String?
+    public var lastPollErrorMessage: String?
     
     public init(
         id: UUID = UUID(),
@@ -121,7 +126,11 @@ public struct Run: Codable, Identifiable, Equatable {
         billedUSD: Decimal? = nil,
         nodeSchemaVersion: Int,
         nodeArgsSnapshot: JSONValue,
-        adapterDebug: JSONValue? = nil
+        adapterDebug: JSONValue? = nil,
+        jobID: String? = nil,
+        pendingManualPoll: Bool? = nil,
+        lastPollErrorCode: String? = nil,
+        lastPollErrorMessage: String? = nil
     ) {
         self.id = id
         self.nodeID = nodeID
@@ -139,6 +148,10 @@ public struct Run: Codable, Identifiable, Equatable {
         self.nodeSchemaVersion = nodeSchemaVersion
         self.nodeArgsSnapshot = nodeArgsSnapshot
         self.adapterDebug = adapterDebug
+        self.jobID = jobID
+        self.pendingManualPoll = pendingManualPoll
+        self.lastPollErrorCode = lastPollErrorCode
+        self.lastPollErrorMessage = lastPollErrorMessage
     }
     
     // MARK: - Helper Methods

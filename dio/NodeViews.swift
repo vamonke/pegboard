@@ -82,25 +82,9 @@ struct NodeCard: View {
                 } else if node.kind == .videoUpload {
                     VideoUploadNodeView(node: node)
                 }
-
-                // // Display content based on node type
-                // Group {
-                //     switch node.kind {
-                //     case .textPrompt:
-                //         TextPromptNodeView(node: node)
-                //     case .imageGeneration:
-                //         ImageGenerationNodeView(node: node)
-                //     case .imageEdit:
-                //         ImageEditNodeView(node: node)
-                    
-                //     default:
-                //         Text("Unknown node type")
-                //             .foregroundStyle(.secondary)
-                //     }
-                // }
                 
                 // Latest outputs display / progress
-                LatestOutputsView(nodeID: node.id, node: node, onTap: onShowOutputPreview)
+                LatestOutputsView(nodeID: node.id, node: node, onTap: onShowOutputPreview, onRetry: onExecuteNode)
                 
                 // Node execution button
                 if node.kind.isExecutable, let onExecuteNode = onExecuteNode {
@@ -932,6 +916,7 @@ struct LatestOutputsView: View {
     let nodeID: UUID
     let node: Node
     let onTap: (() -> Void)?
+    let onRetry: (() -> Void)?
     
     @StateObject private var executionEngine = ExecutionEngine.shared
     @StateObject private var persistence = RunPersistence.shared
@@ -950,6 +935,90 @@ struct LatestOutputsView: View {
                         InlineOutputPreviewView(artifact: primaryOutput, promptHint: promptHint, availableWidth: 212)
                     }
                 }
+            } else if let run = latestRun, (run.status == .running || run.status == .queued), (run.pendingManualPoll == true) {
+                // Poll failed transiently; allow manual retry
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color(.systemGray5))
+                    .frame(height: 100)
+                    .overlay(
+                        VStack(spacing: 8) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "wifi.exclamationmark")
+                                    .foregroundStyle(.secondary)
+                                Text("Status update failed")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                            }
+                            if let msg = run.lastPollErrorMessage, !msg.isEmpty {
+                                Text(msg)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            Button {
+                                print("[UI] Retry poll tapped for node=\(nodeID)")
+                                Task { await executionEngine.retryPolling(node: node) }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("Retry poll")
+                                }
+                                .font(.caption)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.accentColor.opacity(0.12))
+                                .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(8)
+                    )
+            } else if let run = latestRun, run.status == .failed, (run.jobID == nil) {
+                // Initial invoke failed (no async job); offer retry invoke
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color(.systemGray5))
+                    .frame(height: 100)
+                    .overlay(
+                        VStack(spacing: 8) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .foregroundStyle(.secondary)
+                                Text("Model invocation failed")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                            }
+                            if let msg = run.errorMessage, !msg.isEmpty {
+                                Text(msg)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            if let onRetry = onRetry {
+                                Button {
+                                    print("[UI] Retry invoke tapped for node=\(nodeID)")
+                                    onRetry()
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "arrow.clockwise")
+                                        Text("Retry")
+                                    }
+                                    .font(.caption)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.accentColor.opacity(0.12))
+                                    .cornerRadius(6)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(8)
+                    )
             } else if status == .running || status == .queued {
                 // VStack(alignment: .leading, spacing: 8) {
                 //     HStack(spacing: 8) {

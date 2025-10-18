@@ -219,9 +219,9 @@ public class RunPersistence: ObservableObject {
     
     public func getPrimaryArtifactForRun(_ runID: UUID) -> Artifact? {
         let primaryLink = runArtifacts.values.first { $0.runID == runID && $0.isPrimary }
-        print("🔍 RunPersistence - Primary link for run \(runID): \(primaryLink?.id.uuidString ?? "nil")")
+        // print("🔍 RunPersistence - Primary link for run \(runID): \(primaryLink?.id.uuidString ?? "nil")")
         let result = primaryLink.flatMap { artifacts[$0.artifactID] }
-        print("🔍 RunPersistence - Primary artifact for run \(runID): \(result?.displayName ?? "nil")")
+        // print("🔍 RunPersistence - Primary artifact for run \(runID): \(result?.displayName ?? "nil")")
         return result
     }
     
