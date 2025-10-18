@@ -48,6 +48,14 @@ struct OutputPreviewView: View {
         return outputs
     }
     
+    // Currently displayed artifact within the selected run
+    private var currentArtifact: Artifact? {
+        guard !currentRunOutputs.isEmpty, currentImageIndex < currentRunOutputs.count else {
+            return nil
+        }
+        return currentRunOutputs[currentImageIndex]
+    }
+    
     // Fallback to latest run if no successful runs
     private var fallbackRun: Run? {
         let run = executionEngine.getLatestRunForNode(node.id)
@@ -92,6 +100,21 @@ struct OutputPreviewView: View {
 
                         Spacer()
                         
+                        // Share / Download current artifact
+                        if let artifact = currentArtifact {
+                            if let shareURL = ArtifactManager.shared.getArtifactURL(artifact) ?? URL(string: artifact.uri) {
+                                ShareLink(item: shareURL) {
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.title2)
+                                        .foregroundColor(.white)
+                                        .frame(width: 44, height: 44)
+                                        .background(Color.black.opacity(0.3))
+                                        .clipShape(Circle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+
                         // Run details toggle
                         Button(action: {
                             showRunDetails.toggle()
