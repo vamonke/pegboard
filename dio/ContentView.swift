@@ -497,11 +497,11 @@ struct ContentView: View {
 
                     case .upload:
                         Group {
-                            menuLeafButton(icon: "photo.on.rectangle", title: "Upload Image") {
+                            menuLeafButton(icon: "photo.on.rectangle", title: NodeKind.imageUpload.displayName) {
                                 addNode(of: .imageUpload, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: "video", title: "Upload Video") {
+                            menuLeafButton(icon: "video", title: NodeKind.videoUpload.displayName) {
                                 addNode(of: .videoUpload, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
@@ -509,11 +509,11 @@ struct ContentView: View {
 
                     case .image:
                         Group {
-                            menuLeafButton(icon: "photo", title: "Text → Image") {
+                            menuLeafButton(icon: "photo", title: NodeKind.imageGeneration.displayName) {
                                 addNode(of: .imageGeneration, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: "photo.badge.plus", title: "Edit Image") {
+                            menuLeafButton(icon: "photo.badge.plus", title: NodeKind.imageEdit.displayName) {
                                 addNode(of: .imageEdit, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
@@ -521,19 +521,19 @@ struct ContentView: View {
 
                     case .video:
                         Group {
-                            menuLeafButton(icon: "video", title: "Video Generation – OpenAI Sora 2") {
+                            menuLeafButton(icon: "video", title: NodeKind.videoGeneration.displayName) {
                                 addNode(of: .videoGeneration, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: "video", title: "Image → Video – Kling 2.5") {
+                            menuLeafButton(icon: "video", title: NodeKind.imageToVideo.displayName) {
                                 addNode(of: .imageToVideo, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: "video", title: "Animate Replace – Wan 2.2") {
+                            menuLeafButton(icon: "video", title: NodeKind.wanAnimateReplace.displayName) {
                                 addNode(of: .wanAnimateReplace, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: "video", title: "Animate Move – Wan 2.2") {
+                            menuLeafButton(icon: "video", title: NodeKind.wanAnimateMove.displayName) {
                                 addNode(of: .wanAnimateMove, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }

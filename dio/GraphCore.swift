@@ -124,14 +124,14 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
     public var displayName: String {
         switch self {
         case .textPrompt: return "Prompt"
-        case .imageGeneration: return "Generate Image"
-        case .imageEdit: return "Edit Image"
-        case .videoGeneration: return "Generate Video"
-        case .imageToVideo: return "Image to Video"
-        case .imageUpload: return "Image"
-        case .videoUpload: return "Video"
-        case .wanAnimateMove: return "Animate Move - Wan 2.2"
-        case .wanAnimateReplace: return "Animate Replace - Wan 2.2"
+        case .imageGeneration: return "Flux - Schnell"
+        case .imageEdit: return "Nano Banana - Edit"
+        case .videoGeneration: return "OpenAI - Sora 2"
+        case .imageToVideo: return "Kling - Image to Video"
+        case .imageUpload: return "Gallery Image"
+        case .videoUpload: return "Gallery Video"
+        case .wanAnimateMove: return "WAN - Animate Move"
+        case .wanAnimateReplace: return "WAN - Animate Replace"
         default: return rawValue.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
