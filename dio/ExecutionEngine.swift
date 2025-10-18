@@ -405,7 +405,7 @@ public class ExecutionEngine: ObservableObject {
                 endpoint: "/fal-ai/bytedance/seedream/v4/edit",
                 mode: "async"
             )
-        } else if node.kind == .videoGeneration {
+        } else if node.kind == .openaiSora {
             // OpenAI Sora default
             let chosenModel = node.getArg("/model", as: String.self) ?? "sora-2"
             modelRef = ModelRef(
@@ -660,7 +660,7 @@ public class ExecutionEngine: ObservableObject {
         // if node.kind == .imageGeneration || node.kind == .imageEdit || node.kind == .seedreamEdit || node.kind == .imageToVideo || node.kind == .seedanceImageToVideo || node.kind == .wanAnimateMove || node.kind == .wanAnimateReplace {
         //     return AdapterRegistry.shared.getAdapter(for: "FAL") ?? FALAdapter()
         // }
-        if node.kind == .videoGeneration {
+        if node.kind == .openaiSora {
             return AdapterRegistry.shared.getAdapter(for: "OpenAI") ?? OpenAIAdapter()
         }
         return AdapterRegistry.shared.getAdapter(for: "FAL") ?? FALAdapter()

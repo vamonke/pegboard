@@ -80,7 +80,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
     public static let imageGeneration = NodeKind(rawValue: "image_generation")
     public static let imageEdit = NodeKind(rawValue: "image_edit")
     public static let seedreamEdit = NodeKind(rawValue: "seedream_edit")
-    public static let videoGeneration = NodeKind(rawValue: "video_generation")
+    public static let openaiSora = NodeKind(rawValue: "video_generation")
     public static let imageToVideo = NodeKind(rawValue: "image_to_video")
     public static let seedanceImageToVideo = NodeKind(rawValue: "seedance_image_to_video")
     public static let imageUpload = NodeKind(rawValue: "image_upload")
@@ -129,7 +129,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .imageGeneration: return "Flux - Schnell"
         case .imageEdit: return "Nano Banana - Edit"
         case .seedreamEdit: return "SeedDream v4 - Edit"
-        case .videoGeneration: return "OpenAI - Sora 2"
+        case .openaiSora: return "OpenAI - Sora 2"
         case .imageToVideo: return "Kling - Image to Video"
         case .seedanceImageToVideo: return "Seedance - Image to Video"
         case .imageUpload: return "Image"
@@ -146,7 +146,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .imageGeneration: return "photo"
         case .imageEdit: return "photo"
         case .seedreamEdit: return "photo"
-        case .videoGeneration: return "film"
+        case .openaiSora: return "film"
         case .imageToVideo: return "film"
         case .seedanceImageToVideo: return "film"
         case .imageUpload: return "photo"
@@ -442,7 +442,7 @@ public extension Node {
             case "image_urls": return "/image_urls"
             default: return "/\(targetPort.name)"
             }
-        case .videoGeneration:
+        case .openaiSora:
             switch targetPort.name {
             case "prompt": return "/prompt"
             case "input_reference": return "/input_reference"
@@ -837,8 +837,8 @@ extension Node {
         )
     }
     
-    // Create a VideoGeneration node with default ports and args (OpenAI Sora)
-    public static func videoGeneration(
+    // Create a OpenaiSora node with default ports and args (OpenAI Sora)
+    public static func openaiSora(
         id: UUID = UUID(),
         frame: CGRect,
         prompt: String = "",
@@ -864,7 +864,7 @@ extension Node {
         
         return Node(
             id: id,
-            kind: .videoGeneration,
+            kind: .openaiSora,
             frame: frame,
             args: args,
             ports: ports

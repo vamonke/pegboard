@@ -66,8 +66,8 @@ struct NodeEditSheet: View {
                                 self.commitEdits = closure
                             }
                         )
-                    case .videoGeneration:
-                        VideoGenerationEditView(
+                    case .openaiSora:
+                        OpenaiSoraEditView(
                             node: $tempNode,
                             onRegisterCommit: { closure in
                                 self.commitEdits = closure
@@ -466,7 +466,7 @@ struct SeedDreamEditView: View {
 }
 
 // Video Generation Edit View (OpenAI Sora)
-struct VideoGenerationEditView: View {
+struct OpenaiSoraEditView: View {
     @SwiftUI.Binding var node: Node
     let onRegisterCommit: (@escaping () -> Void) -> Void
 

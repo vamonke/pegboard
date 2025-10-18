@@ -525,8 +525,8 @@ struct ContentView: View {
 
                     case .video:
                         VStack(spacing: 12) {
-                            menuLeafButton(icon: NodeKind.videoGeneration.iconName, title: NodeKind.videoGeneration.displayName) {
-                                addNode(of: .videoGeneration, at: canvasCenterPosition())
+                            menuLeafButton(icon: NodeKind.openaiSora.iconName, title: NodeKind.openaiSora.displayName) {
+                                addNode(of: .openaiSora, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
                             menuLeafButton(icon: NodeKind.imageToVideo.iconName, title: NodeKind.imageToVideo.displayName) {
@@ -802,8 +802,8 @@ struct ContentView: View {
             node = Node.imageEdit(frame: frame)
         case .seedreamEdit:
             node = Node.seedreamEdit(frame: frame)
-        case .videoGeneration:
-            node = Node.videoGeneration(frame: frame)
+        case .openaiSora:
+            node = Node.openaiSora(frame: frame)
         case .imageToVideo:
             node = Node.imageToVideo(frame: frame)
         case .seedanceImageToVideo:

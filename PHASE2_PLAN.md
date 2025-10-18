@@ -158,7 +158,7 @@ struct InvocationResponse: Codable {
 - [x] **TextPrompt**: Return input text as-is
 - [x] **ImageGeneration**: Generate placeholder images with prompt text
 - [x] **ImageOutput**: Save images to local storage
-- [x] **VideoGeneration**: Create placeholder video files
+- [x] **OpenaiSora**: Create placeholder video files
 
 ---
 

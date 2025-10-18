@@ -90,7 +90,7 @@ class MockAdapterTests: XCTestCase {
     
     // MARK: - Video Generation Tests
     
-    func testVideoGeneration() async throws {
+    func testOpenaiSora() async throws {
         let request = InvocationRequest(
             model: ModelRef(
                 provider: "Mock",

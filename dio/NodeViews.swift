@@ -1067,7 +1067,7 @@ struct LatestOutputsView: View {
         switch node.kind {
         case .imageGeneration, .imageEdit:
             return true
-        case .videoGeneration:
+        case .openaiSora:
             return true
         default:
             // For other executable nodes, check if they have output ports that expect images or text
@@ -1464,7 +1464,7 @@ struct OutputPlaceholderView: View {
 
     private var isVideoOutputNode: Bool {
         switch nodeKind {
-        case .videoGeneration, .seedanceImageToVideo, .wanAnimateMove, .wanAnimateReplace, .imageToVideo:
+        case .openaiSora, .seedanceImageToVideo, .wanAnimateMove, .wanAnimateReplace, .imageToVideo:
             return true
         default:
             return false
