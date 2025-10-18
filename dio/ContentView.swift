@@ -480,13 +480,13 @@ struct ContentView: View {
                     switch addMenuLevel {
                     case .root:
                         Group {
-                            menuCategoryButton(icon: "square.and.arrow.up.on.square", title: "Upload") {
+                            menuCategoryButton(icon: "square.and.arrow.up", title: "Upload") {
                                 addMenuLevel = .upload
                             }
-                            menuCategoryButton(icon: "photo.on.rectangle", title: "Image") {
+                            menuCategoryButton(icon: "photo", title: "Image") {
                                 addMenuLevel = .image
                             }
-                            menuCategoryButton(icon: "video", title: "Video") {
+                            menuCategoryButton(icon: "film", title: "Video") {
                                 addMenuLevel = .video
                             }
                             menuLeafButton(icon: "character", title: "Text Prompt") {
@@ -497,11 +497,11 @@ struct ContentView: View {
 
                     case .upload:
                         Group {
-                            menuLeafButton(icon: "photo.on.rectangle", title: NodeKind.imageUpload.displayName) {
+                            menuLeafButton(icon: NodeKind.imageUpload.iconName, title: NodeKind.imageUpload.displayName) {
                                 addNode(of: .imageUpload, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: "video", title: NodeKind.videoUpload.displayName) {
+                            menuLeafButton(icon: NodeKind.videoUpload.iconName, title: NodeKind.videoUpload.displayName) {
                                 addNode(of: .videoUpload, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
@@ -509,11 +509,11 @@ struct ContentView: View {
 
                     case .image:
                         Group {
-                            menuLeafButton(icon: "photo", title: NodeKind.imageGeneration.displayName) {
+                            menuLeafButton(icon: NodeKind.imageGeneration.iconName, title: NodeKind.imageGeneration.displayName) {
                                 addNode(of: .imageGeneration, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: "photo.badge.plus", title: NodeKind.imageEdit.displayName) {
+                            menuLeafButton(icon: NodeKind.imageEdit.iconName, title: NodeKind.imageEdit.displayName) {
                                 addNode(of: .imageEdit, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
@@ -521,19 +521,19 @@ struct ContentView: View {
 
                     case .video:
                         Group {
-                            menuLeafButton(icon: "video", title: NodeKind.videoGeneration.displayName) {
+                            menuLeafButton(icon: NodeKind.videoGeneration.iconName, title: NodeKind.videoGeneration.displayName) {
                                 addNode(of: .videoGeneration, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: "video", title: NodeKind.imageToVideo.displayName) {
+                            menuLeafButton(icon: NodeKind.imageToVideo.iconName, title: NodeKind.imageToVideo.displayName) {
                                 addNode(of: .imageToVideo, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: "video", title: NodeKind.wanAnimateReplace.displayName) {
+                            menuLeafButton(icon: NodeKind.wanAnimateReplace.iconName, title: NodeKind.wanAnimateReplace.displayName) {
                                 addNode(of: .wanAnimateReplace, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
-                            menuLeafButton(icon: "video", title: NodeKind.wanAnimateMove.displayName) {
+                            menuLeafButton(icon: NodeKind.wanAnimateMove.iconName, title: NodeKind.wanAnimateMove.displayName) {
                                 addNode(of: .wanAnimateMove, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
@@ -557,7 +557,8 @@ struct ContentView: View {
                     .font(.headline)
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .foregroundColor(.secondary)
+                   .font(.caption)
+                   .foregroundColor(.secondary)
             }
             .foregroundColor(.primary)
             .padding()

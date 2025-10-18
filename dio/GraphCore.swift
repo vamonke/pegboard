@@ -128,8 +128,8 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .imageEdit: return "Nano Banana - Edit"
         case .videoGeneration: return "OpenAI - Sora 2"
         case .imageToVideo: return "Kling - Image to Video"
-        case .imageUpload: return "Gallery Image"
-        case .videoUpload: return "Gallery Video"
+        case .imageUpload: return "Image"
+        case .videoUpload: return "Video"
         case .wanAnimateMove: return "WAN - Animate Move"
         case .wanAnimateReplace: return "WAN - Animate Replace"
         default: return rawValue.replacingOccurrences(of: "_", with: " ").capitalized
@@ -139,14 +139,14 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
     public var iconName: String {
         switch self {
         case .textPrompt: return "character"
-        case .imageGeneration: return "photo.badge.plus"
-        case .imageEdit: return "photo.badge.plus"
-        case .videoGeneration: return "video.badge.plus"
-        case .imageToVideo: return "video"
-        case .imageUpload: return "photo.on.rectangle"
-        case .videoUpload: return "video"
-        case .wanAnimateMove: return "video"
-        case .wanAnimateReplace: return "video"
+        case .imageGeneration: return "photo"
+        case .imageEdit: return "photo"
+        case .videoGeneration: return "film"
+        case .imageToVideo: return "film"
+        case .imageUpload: return "photo"
+        case .videoUpload: return "film"
+        case .wanAnimateMove: return "film"
+        case .wanAnimateReplace: return "film"
         default: return "circle"
         }
     }
