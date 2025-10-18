@@ -59,6 +59,13 @@ struct NodeEditSheet: View {
                                 self.commitEdits = closure
                             }
                         )
+                    case .seedreamEdit:
+                        SeedDreamEditView(
+                            node: $tempNode,
+                            onRegisterCommit: { closure in
+                                self.commitEdits = closure
+                            }
+                        )
                     case .videoGeneration:
                         VideoGenerationEditView(
                             node: $tempNode,
@@ -322,6 +329,130 @@ struct ImageGenerationEditView: View {
                 let (w, h) = self.localSizePreset.widthHeight
                 node.setArg("/size/width", value: Double(w))
                 node.setArg("/size/height", value: Double(h))
+            }
+        }
+    }
+}
+
+// SeedDream v4 Edit View
+struct SeedDreamEditView: View {
+    @SwiftUI.Binding var node: Node
+    let onRegisterCommit: (@escaping () -> Void) -> Void
+
+    @State private var localPrompt: String = ""
+    @State private var localNumImages: Int = 1
+    @State private var localMaxImages: Int = 1
+    @State private var localWidth: Int = 2048
+    @State private var localHeight: Int = 2048
+    // @State private var localEnableSafety: Bool = false
+    // @State private var setSeedManually: Bool = false
+    // @State private var localSeed: Int = 0
+
+    private enum SeedDreamSizePreset: String, CaseIterable, Identifiable {
+        case squareHD
+        case portrait_9_16
+        case landscape_16_9
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .squareHD: return "Square HD (2048x2048)"
+            case .portrait_9_16: return "Portrait 9:16 (720x1280)"
+            case .landscape_16_9: return "Landscape 16:9 (1280x720)"
+            }
+        }
+        var widthHeight: (Int, Int) {
+            switch self {
+            case .squareHD: return (2048, 2048)
+            case .portrait_9_16: return (720, 1280)
+            case .landscape_16_9: return (1280, 720)
+            }
+        }
+    }
+    @State private var selectedPreset: SeedDreamSizePreset = .squareHD
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Prompt
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Prompt")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $localPrompt)
+                        .frame(minHeight: 80)
+                        .padding(0)
+                    if localPrompt.isEmpty {
+                        Text("Describe how to edit the input images…")
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 8)
+                            .allowsHitTesting(false)
+                    }
+                }
+            }
+
+            // Size preset
+            HStack(spacing: 12) {
+                Text("Size")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Spacer()
+                Picker("Size", selection: $selectedPreset) {
+                    ForEach(SeedDreamSizePreset.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+
+            // Counts
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Images per generation")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Stepper(value: $localNumImages, in: 1...6) {
+                    Text("Num images: \(localNumImages)")
+                }
+                Stepper(value: $localMaxImages, in: 1...6) {
+                    Text("Max images: \(localMaxImages)")
+                }
+            }
+
+//            // Safety and seed
+//            Toggle("Enable Safety Checker", isOn: $localEnableSafety)
+//            VStack(alignment: .leading, spacing: 8) {
+//                Toggle("Set Seed", isOn: $setSeedManually)
+//                if setSeedManually {
+//                    Stepper(value: $localSeed, in: 0...1_000_000) {
+//                        Text("Seed: \(localSeed)")
+//                    }
+//                }
+//            }
+        }
+        .onAppear {
+            // Initialize local state from node args
+            self.localPrompt = node.getArg("/prompt", as: String.self) ?? ""
+            self.localNumImages = max(1, min(6, node.getArg("/num_images", as: Int.self) ?? 1))
+            self.localMaxImages = max(1, min(6, node.getArg("/max_images", as: Int.self) ?? 1))
+            self.localWidth = Int(node.getArg("/image_size/width", as: Double.self) ?? 2048)
+            self.localHeight = Int(node.getArg("/image_size/height", as: Double.self) ?? 2048)
+            // Infer preset from current size
+            if localWidth == 2048 && localHeight == 2048 { self.selectedPreset = .squareHD }
+            else if localWidth == 720 && localHeight == 1280 { self.selectedPreset = .portrait_9_16 }
+            else if localWidth == 1280 && localHeight == 720 { self.selectedPreset = .landscape_16_9 }
+            else { self.selectedPreset = .squareHD }
+            // self.localEnableSafety = node.getArg("/enable_safety_checker", as: Bool.self) ?? true
+            // if let seed = node.getArg("/seed", as: Int.self) { self.setSeedManually = true; self.localSeed = seed } else { self.setSeedManually = false }
+
+            onRegisterCommit {
+                node.setArg("/prompt", value: self.localPrompt)
+                node.setArg("/num_images", value: self.localNumImages)
+                node.setArg("/max_images", value: self.localMaxImages)
+                let (w, h) = self.selectedPreset.widthHeight
+                node.setArg("/image_size/width", value: Double(w))
+                node.setArg("/image_size/height", value: Double(h))
+//                node.setArg("/enable_safety_checker", value: self.localEnableSafety)
+//                if self.setSeedManually { node.setArg("/seed", value: self.localSeed) }
             }
         }
     }

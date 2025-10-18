@@ -517,6 +517,10 @@ struct ContentView: View {
                                 addNode(of: .imageEdit, at: canvasCenterPosition())
                                 isNodeCreationMenuPresented = false
                             }
+                            menuLeafButton(icon: NodeKind.seedreamEdit.iconName, title: NodeKind.seedreamEdit.displayName) {
+                                addNode(of: .seedreamEdit, at: canvasCenterPosition())
+                                isNodeCreationMenuPresented = false
+                            }
                         }
 
                     case .video:
@@ -792,6 +796,8 @@ struct ContentView: View {
             node = Node.imageGeneration(frame: frame)
         case .imageEdit:
             node = Node.imageEdit(frame: frame)
+        case .seedreamEdit:
+            node = Node.seedreamEdit(frame: frame)
         case .videoGeneration:
             node = Node.videoGeneration(frame: frame)
         case .imageToVideo:

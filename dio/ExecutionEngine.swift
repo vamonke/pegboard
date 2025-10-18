@@ -397,6 +397,14 @@ public class ExecutionEngine: ObservableObject {
                 endpoint: "/fal-ai/nano-banana/edit",
                 mode: "async"
             )
+        } else if node.kind == .seedreamEdit {
+            // FAL SeedDream v4 Edit (image-to-image)
+            modelRef = ModelRef(
+                provider: "FAL",
+                modelID: "fal-ai/bytedance/seedream/v4/edit",
+                endpoint: "/fal-ai/bytedance/seedream/v4/edit",
+                mode: "async"
+            )
         } else if node.kind == .videoGeneration {
             // OpenAI Sora default
             let chosenModel = node.getArg("/model", as: String.self) ?? "sora-2"
@@ -629,7 +637,7 @@ public class ExecutionEngine: ObservableObject {
     }
     
     private func getAdapterForNode(_ node: Node) -> CloudAdapter {
-        if node.kind == .imageGeneration || node.kind == .imageEdit || node.kind == .imageToVideo || node.kind == .wanAnimateMove || node.kind == .wanAnimateReplace {
+        if node.kind == .imageGeneration || node.kind == .imageEdit || node.kind == .seedreamEdit || node.kind == .imageToVideo || node.kind == .wanAnimateMove || node.kind == .wanAnimateReplace {
             return AdapterRegistry.shared.getAdapter(for: "FAL") ?? FALAdapter()
         } else if node.kind == .videoGeneration {
             return AdapterRegistry.shared.getAdapter(for: "OpenAI") ?? OpenAIAdapter()

@@ -79,6 +79,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
     public static let textPrompt = NodeKind(rawValue: "text_prompt")
     public static let imageGeneration = NodeKind(rawValue: "image_generation")
     public static let imageEdit = NodeKind(rawValue: "image_edit")
+    public static let seedreamEdit = NodeKind(rawValue: "seedream_edit")
     public static let videoGeneration = NodeKind(rawValue: "video_generation")
     public static let imageToVideo = NodeKind(rawValue: "image_to_video")
     public static let imageUpload = NodeKind(rawValue: "image_upload")
@@ -95,7 +96,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
             return .input
         case .imageGeneration:
             return .execution
-        case .imageEdit:
+        case .imageEdit, .seedreamEdit:
             return .execution
         default:
             // Default categorization based on naming patterns
@@ -126,6 +127,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .textPrompt: return "Prompt"
         case .imageGeneration: return "Flux - Schnell"
         case .imageEdit: return "Nano Banana - Edit"
+        case .seedreamEdit: return "SeedDream v4 - Edit"
         case .videoGeneration: return "OpenAI - Sora 2"
         case .imageToVideo: return "Kling - Image to Video"
         case .imageUpload: return "Image"
@@ -141,6 +143,7 @@ public struct NodeKind: RawRepresentable, Codable, Hashable {
         case .textPrompt: return "character"
         case .imageGeneration: return "photo"
         case .imageEdit: return "photo"
+        case .seedreamEdit: return "photo"
         case .videoGeneration: return "film"
         case .imageToVideo: return "film"
         case .imageUpload: return "photo"
@@ -425,6 +428,12 @@ public extension Node {
             default: return "/\(targetPort.name)"
             }
         case .imageEdit:
+            switch targetPort.name {
+            case "prompt": return "/prompt"
+            case "image_urls": return "/image_urls"
+            default: return "/\(targetPort.name)"
+            }
+        case .seedreamEdit:
             switch targetPort.name {
             case "prompt": return "/prompt"
             case "image_urls": return "/image_urls"
@@ -780,6 +789,45 @@ extension Node {
         return Node(
             id: id,
             kind: .imageEdit,
+            frame: frame,
+            args: args,
+            ports: ports
+        )
+    }
+
+    // Create a SeedDream v4 Edit node with default ports and args
+    public static func seedreamEdit(
+        id: UUID = UUID(),
+        frame: CGRect,
+        prompt: String = "",
+        imageUrls: [String] = [],
+        numImages: Int = 1,
+        imageSize: CGSize = CGSize(width: 2048, height: 2048),
+        maxImages: Int = 1,
+        enableSafetyChecker: Bool = true,
+        seed: Int? = nil
+    ) -> Node {
+        let ports = [
+            PortDef(name: "prompt", dtype: .string, direction: "in"),
+            PortDef(name: "image_urls", dtype: .image, direction: "in"),
+            PortDef(name: "image_output", dtype: .image, direction: "out", mimeType: "image/png")
+        ]
+        var argsObj: [String: JSONValue] = [
+            "prompt": .string(prompt),
+            "image_urls": .array(imageUrls.map { .string($0) }),
+            "num_images": .number(Double(max(1, min(6, numImages)))) ,
+            "image_size": .object([
+                "width": .number(Double(imageSize.width)),
+                "height": .number(Double(imageSize.height))
+            ]),
+            "max_images": .number(Double(max(1, min(6, maxImages)))),
+            "enable_safety_checker": .bool(enableSafetyChecker)
+        ]
+        if let seed = seed { argsObj["seed"] = .number(Double(seed)) }
+        let args: JSONValue = .object(argsObj)
+        return Node(
+            id: id,
+            kind: .seedreamEdit,
             frame: frame,
             args: args,
             ports: ports

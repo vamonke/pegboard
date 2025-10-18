@@ -1393,7 +1393,7 @@ struct OutputPlaceholderView: View {
     
     private var isImageOutputNode: Bool {
         switch nodeKind {
-        case .imageGeneration, .imageEdit:
+        case .imageGeneration, .imageEdit, .seedreamEdit:
             return true
         default:
             return false
@@ -1419,7 +1419,7 @@ struct ImagePlaceholderView: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 6, style: .continuous)
             .fill(Color(.systemGray5))
-            .frame(height: 100)
+            .frame(height: 120)
             .overlay(
                 VStack(spacing: 8) {
                     Image(systemName: "photo")
@@ -1455,7 +1455,7 @@ struct VideoPlaceholderView: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 6, style: .continuous)
             .fill(Color(.systemGray5))
-            .frame(height: 100)
+            .frame(height: 120)
             .overlay(
                 VStack(spacing: 8) {
                     Image(systemName: "video")

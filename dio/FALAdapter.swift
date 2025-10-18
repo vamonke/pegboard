@@ -21,6 +21,8 @@ public class FALAdapter: CloudAdapter {
         let input: Payload
         if request.model.modelID.contains("nano-banana/edit") {
             input = await buildNanoBananaEditInput(from: request.params)
+        } else if request.model.modelID.contains("bytedance/seedream/v4/edit") {
+            input = await buildSeedDreamV4EditInput(from: request.params)
         } else if request.model.modelID.contains("kling-video") && request.model.modelID.contains("image-to-video") {
             input = await buildKlingImageToVideoInput(from: request.params)
         } else if request.model.modelID.contains("wan/v2.2-14b/animate/move") {
@@ -310,6 +312,52 @@ public class FALAdapter: CloudAdapter {
             "image_urls": .array(preparedUrls.map { .string($0) })
         ]
         
+        return .dict(dict)
+    }
+
+    private func buildSeedDreamV4EditInput(from params: JSONValue) async -> Payload {
+        // Matches FAL OpenAPI for fal-ai/bytedance/seedream/v4/edit
+        // Required: prompt, image_urls[]
+        // Optional: image_size{width,height}|preset string, num_images(1..6), max_images(1..6), seed, sync_mode, enable_safety_checker
+
+        let prompt = params.get("/prompt", as: String.self) ?? ""
+        let numImages = max(1, min(6, params.get("/num_images", as: Int.self) ?? 1))
+        let maxImages = max(1, min(6, params.get("/max_images", as: Int.self) ?? 1))
+        let enableSafety = params.get("/enable_safety_checker", as: Bool.self) ?? true
+        let seed = params.get("/seed", as: Int.self)
+
+        // image_size may be an object {width,height} or preset string; here we accept object
+        let width = params.get("/image_size/width", as: Double.self) ?? 2048
+        let height = params.get("/image_size/height", as: Double.self) ?? 2048
+
+        // Extract image_urls array and normalize to HTTPS via uploadIfNeeded
+        var rawUrls: [String] = []
+        if case .array(let arr) = JSONPointer("/image_urls").get(from: params) {
+            for v in arr {
+                if case .string(let s) = v { rawUrls.append(s) }
+            }
+        }
+        var preparedUrls: [String] = []
+        for url in rawUrls {
+            if let uploaded = await uploadIfNeeded(url) {
+                preparedUrls.append(uploaded)
+            } else {
+                preparedUrls.append(url)
+            }
+        }
+
+        var dict: [String: Payload] = [
+            "prompt": .string(prompt),
+            "image_size": .dict([
+                "width": width.rounded() == width ? .int(Int(width)) : .double(width),
+                "height": height.rounded() == height ? .int(Int(height)) : .double(height)
+            ]),
+            "num_images": .int(numImages),
+            "max_images": .int(maxImages),
+            "enable_safety_checker": .bool(enableSafety),
+            "image_urls": .array(preparedUrls.map { .string($0) })
+        ]
+        if let seed = seed { dict["seed"] = .int(seed) }
         return .dict(dict)
     }
     
